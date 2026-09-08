@@ -15,20 +15,30 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Today
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,8 +46,10 @@ import com.arttvad.worktime.R
 import com.arttvad.worktime.data.preferences.WorkPreferences
 import com.arttvad.worktime.domain.calculation.MoneyFormatter
 import com.arttvad.worktime.domain.model.MonthSummary
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.ZoneOffset
 import kotlinx.coroutines.launch
 
 private const val LargeFontScaleThreshold = 1.5f
@@ -53,9 +65,11 @@ internal fun MonthContent(
     val scope = rememberCoroutineScope()
     val displayedMonth = monthForPage(pagerState.currentPage)
     val currentMonth = YearMonth.now()
+    val today = LocalDate.now()
     val largeFont = LocalDensity.current.fontScale >= LargeFontScaleThreshold
     val pagerMinHeight = if (largeFont) 540.dp else 370.dp
     val pagerMaxHeight = if (largeFont) 570.dp else 390.dp
+    var dateShortcutOpen by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -81,6 +95,7 @@ internal fun MonthContent(
             onToday = {
                 scope.launch { pagerState.animateScrollToPage(pageForMonth(currentMonth)) }
             },
+            onDateShortcut = { dateShortcutOpen = true },
         )
 
         MonthSummaryCard(
@@ -117,6 +132,23 @@ internal fun MonthContent(
             )
         }
     }
+
+    if (dateShortcutOpen) {
+        val initialDate = uiState.selectedDate
+            ?.takeIf { YearMonth.from(it) == displayedMonth }
+            ?: if (YearMonth.from(today) == displayedMonth) today else displayedMonth.atDay(1)
+        DateShortcutDialog(
+            initialDate = initialDate,
+            onDismiss = { dateShortcutOpen = false },
+            onDateSelected = { date ->
+                dateShortcutOpen = false
+                scope.launch {
+                    pagerState.scrollToPage(pageForMonth(YearMonth.from(date)))
+                    onDaySelected(date)
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -128,7 +160,11 @@ private fun MonthHeader(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onToday: () -> Unit,
+    onDateShortcut: () -> Unit,
 ) {
+    val monthTitle = formatMonthTitle(month)
+    val dateShortcutDescription = stringResource(R.string.date_shortcut_description, monthTitle)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -139,14 +175,21 @@ private fun MonthHeader(
                 contentDescription = stringResource(R.string.previous_month),
             )
         }
-        Text(
-            text = formatMonthTitle(month),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f),
-            maxLines = 2,
-        )
+        TextButton(
+            onClick = onDateShortcut,
+            modifier = Modifier
+                .weight(1f)
+                .testTag("month-date-shortcut")
+                .semantics { contentDescription = dateShortcutDescription },
+        ) {
+            Text(
+                text = monthTitle,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+            )
+        }
         if (showToday) {
             IconButton(onClick = onToday) {
                 Icon(
@@ -163,6 +206,56 @@ private fun MonthHeader(
         }
     }
 }
+
+@Composable
+internal fun DateShortcutDialog(
+    initialDate: LocalDate,
+    onDismiss: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
+) {
+    val pickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialDate.toUtcMillis(),
+        initialDisplayedMonthMillis = initialDate.withDayOfMonth(1).toUtcMillis(),
+        yearRange = PagerStartMonth.year..monthForPage(PagerMonthCount - 1).year,
+    )
+
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    pickerState.selectedDateMillis?.let { selectedMillis ->
+                        onDateSelected(selectedMillis.toUtcLocalDate())
+                    }
+                },
+                enabled = pickerState.selectedDateMillis != null,
+                modifier = Modifier.testTag("date-shortcut-confirm"),
+            ) {
+                Text(stringResource(R.string.date_shortcut_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("date-shortcut-cancel"),
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    ) {
+        DatePicker(
+            state = pickerState,
+            modifier = Modifier.testTag("date-shortcut-picker"),
+            title = { Text(stringResource(R.string.date_shortcut_title)) },
+        )
+    }
+}
+
+private fun LocalDate.toUtcMillis(): Long =
+    atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
+
+private fun Long.toUtcLocalDate(): LocalDate =
+    Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
 
 @Composable
 private fun MonthSummaryCard(
