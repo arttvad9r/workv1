@@ -35,7 +35,8 @@
 - [x] Gradle Wrapper 9.6.1 с проверкой официальных SHA-256;
 - [x] package/application/theme/resources;
 - [x] edge-to-edge;
-- [x] CI build/lint/unit tests.
+- [x] CI build/lint/unit tests;
+- [x] устанавливаемый debug APK как artifact успешного CI build.
 
 ### Domain/data
 
@@ -70,18 +71,20 @@
 
 ## Phase 2 — Settings + polished core
 
-- [ ] settings destination;
+- [x] secondary payment settings surface without unnecessary navigation hierarchy;
 - [x] default hourly rate;
 - [x] currency;
+- [x] settings persistence across Activity relaunch verified against real DataStore;
 - [x] actual earnings in summary;
 - [ ] optional day rate override;
 - [ ] Navigation 3 integration when justified by destinations;
 - [ ] predictive Back verification;
-- [ ] large-font polish;
-- [ ] TalkBack pass;
+- [ ] large-font polish — calendar/summary have automated 200% font-scale coverage, editor/settings still need coverage;
+- [x] automated Compose accessibility checks for calendar, day editor and payment settings on API 36;
+- [ ] manual TalkBack pass;
 - [x] expanded two-pane layout;
 - [ ] screenshot tests;
-- [x] UI tests for save/edit/delete/relaunch/recreation.
+- [x] UI tests for save/edit/delete/undo/relaunch/recreation/settings persistence.
 
 ## Phase 3 — Work patterns
 
@@ -135,9 +138,9 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью проверенная runtime-ревизия: `e39eaba874688e58fb5ebeed2e0cbb563e6fdddd`.
+Последняя полностью проверенная runtime-ревизия перед CI hardening: `baf177c5d95d4e0f8c41e7b40c86b5a35d96799b`.
 
-GitHub Actions успешно выполняет:
+GitHub Actions успешно выполняет через repository Gradle Wrapper:
 
 - `testDebugUnitTest`;
 - `lintDebug`;
@@ -145,9 +148,9 @@ GitHub Actions успешно выполняет:
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверка использует реальную `MainActivity`, `AppContainer`, Room и DataStore. Проверены сохранение, редактирование, удаление с Undo, повторный запуск Activity и configuration recreation с сохранением релевантного UI-state.
+Instrumentation-проверки используют реальную `MainActivity`, `AppContainer`, Room и DataStore. Проверены сохранение, редактирование, удаление с Undo, повторный запуск Activity, configuration recreation, accessibility основных поверхностей и сохранение payment settings после relaunch. Отдельный configuration test проверяет календарь при font scale 200%.
 
-Gradle Wrapper 9.6.1 сгенерирован самим Gradle; SHA-256 binary distribution и wrapper JAR проверены по официальному Gradle checksum reference. Следующий CI gate обязан работать через `./gradlew`, чтобы локальная и CI-сборки использовали одну версию Gradle.
+Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закрепляются immutable commit SHA. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
 ## Explicitly deferred
 
