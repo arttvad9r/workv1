@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.arttvad.worktime.data.local.DEFAULT_PROFILE_ID
 import java.io.IOException
 import java.time.LocalDate
 import java.util.Currency
@@ -33,6 +34,7 @@ data class WorkPreferences(
     val reminderHour: Int = DEFAULT_REMINDER_HOUR,
     val reminderMinute: Int = DEFAULT_REMINDER_MINUTE,
     val activeShift: ActiveShiftSession? = null,
+    val activeProfileId: Long = DEFAULT_PROFILE_ID,
 )
 
 class WorkPreferencesRepository(
@@ -46,6 +48,7 @@ class WorkPreferencesRepository(
         val reminderMinute = intPreferencesKey("reminder_minute")
         val activeShiftDate = stringPreferencesKey("active_shift_date")
         val activeShiftStartedAt = longPreferencesKey("active_shift_started_at")
+        val activeProfileId = longPreferencesKey("active_profile_id")
     }
 
     val preferences: Flow<WorkPreferences> = context.workTimeDataStore.data
@@ -71,6 +74,9 @@ class WorkPreferencesRepository(
             } else {
                 null
             }
+            val activeProfileId = values[Keys.activeProfileId]
+                ?.takeIf { value -> value > 0L }
+                ?: DEFAULT_PROFILE_ID
 
             WorkPreferences(
                 hourlyRateMinor = values[Keys.hourlyRateMinor],
@@ -79,6 +85,7 @@ class WorkPreferencesRepository(
                 reminderHour = reminderHour,
                 reminderMinute = reminderMinute,
                 activeShift = activeShift,
+                activeProfileId = activeProfileId,
             )
         }
 
@@ -100,6 +107,13 @@ class WorkPreferencesRepository(
             values[Keys.reminderEnabled] = enabled
             values[Keys.reminderHour] = hour
             values[Keys.reminderMinute] = minute
+        }
+    }
+
+    suspend fun selectProfile(profileId: Long) {
+        require(profileId > 0L) { "Profile id must be positive" }
+        context.workTimeDataStore.edit { values ->
+            values[Keys.activeProfileId] = profileId
         }
     }
 
