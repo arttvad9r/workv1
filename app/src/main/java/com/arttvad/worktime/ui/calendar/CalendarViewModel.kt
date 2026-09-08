@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.arttvad.worktime.data.preferences.WorkPreferences
 import com.arttvad.worktime.data.preferences.WorkPreferencesRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
+import com.arttvad.worktime.domain.calculation.DetailedMonthStatistics
+import com.arttvad.worktime.domain.calculation.DetailedMonthStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.MonthSummaryCalculator
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
@@ -30,6 +32,7 @@ data class CalendarUiState(
     val entries: Map<LocalDate, WorkDay> = emptyMap(),
     val selectedDate: LocalDate? = null,
     val summary: MonthSummary = MonthSummary(),
+    val detailedStatistics: DetailedMonthStatistics = DetailedMonthStatistics(),
     val preferences: WorkPreferences = WorkPreferences(),
 )
 
@@ -76,6 +79,10 @@ class CalendarViewModel(
             entries = days.associateBy(WorkDay::date),
             selectedDate = selected,
             summary = MonthSummaryCalculator.calculate(days, preferences.hourlyRateMinor),
+            detailedStatistics = DetailedMonthStatisticsCalculator.calculate(
+                days,
+                preferences.hourlyRateMinor,
+            ),
             preferences = preferences,
         )
     }.stateIn(

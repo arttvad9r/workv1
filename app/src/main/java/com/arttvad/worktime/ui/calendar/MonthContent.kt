@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +47,7 @@ internal fun MonthContent(
     uiState: CalendarUiState,
     pagerState: PagerState,
     onDaySelected: (LocalDate) -> Unit,
+    onStatisticsRequested: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
@@ -81,7 +83,11 @@ internal fun MonthContent(
             },
         )
 
-        MonthSummaryCard(uiState.summary, uiState.preferences)
+        MonthSummaryCard(
+            summary = uiState.summary,
+            preferences = uiState.preferences,
+            onClick = onStatisticsRequested,
+        )
 
         HorizontalPager(
             state = pagerState,
@@ -162,6 +168,7 @@ private fun MonthHeader(
 private fun MonthSummaryCard(
     summary: MonthSummary,
     preferences: WorkPreferences,
+    onClick: () -> Unit,
 ) {
     val earnedText = remember(summary.earningsMinor, preferences.currencyCode) {
         runCatching {
@@ -171,7 +178,10 @@ private fun MonthSummaryCard(
     val largeFont = LocalDensity.current.fontScale >= LargeFontScaleThreshold
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("month-summary"),
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
     ) {

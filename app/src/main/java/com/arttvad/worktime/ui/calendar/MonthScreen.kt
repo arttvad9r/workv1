@@ -64,6 +64,7 @@ fun WorkTimeScreen(
 ) {
     var paymentSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
+    var statisticsOpen by rememberSaveable { mutableStateOf(false) }
     val initialPage = remember { pageForMonth(uiState.visibleMonth) }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
@@ -109,6 +110,7 @@ fun WorkTimeScreen(
                     uiState = uiState,
                     pagerState = pagerState,
                     onDaySelected = onDaySelected,
+                    onStatisticsRequested = { statisticsOpen = true },
                     onDismissDayEditor = onDismissDayEditor,
                     onSaveDay = onSaveDay,
                     onDeleteDay = onDeleteDay,
@@ -118,6 +120,7 @@ fun WorkTimeScreen(
                     uiState = uiState,
                     pagerState = pagerState,
                     onDaySelected = onDaySelected,
+                    onStatisticsRequested = { statisticsOpen = true },
                 )
 
                 uiState.selectedDate?.let { selectedDate ->
@@ -152,6 +155,15 @@ fun WorkTimeScreen(
             onApply = onApplyPattern,
         )
     }
+
+    if (statisticsOpen) {
+        MonthStatisticsSheet(
+            month = uiState.visibleMonth,
+            statistics = uiState.detailedStatistics,
+            preferences = uiState.preferences,
+            onDismiss = { statisticsOpen = false },
+        )
+    }
 }
 
 @Composable
@@ -159,6 +171,7 @@ private fun CompactMonthLayout(
     uiState: CalendarUiState,
     pagerState: PagerState,
     onDaySelected: (LocalDate) -> Unit,
+    onStatisticsRequested: () -> Unit,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -168,6 +181,7 @@ private fun CompactMonthLayout(
             uiState = uiState,
             pagerState = pagerState,
             onDaySelected = onDaySelected,
+            onStatisticsRequested = onStatisticsRequested,
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = 720.dp),
@@ -180,6 +194,7 @@ private fun ExpandedMonthLayout(
     uiState: CalendarUiState,
     pagerState: PagerState,
     onDaySelected: (LocalDate) -> Unit,
+    onStatisticsRequested: () -> Unit,
     onDismissDayEditor: () -> Unit,
     onSaveDay: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
@@ -194,6 +209,7 @@ private fun ExpandedMonthLayout(
             uiState = uiState,
             pagerState = pagerState,
             onDaySelected = onDaySelected,
+            onStatisticsRequested = onStatisticsRequested,
             modifier = Modifier
                 .weight(1.55f)
                 .widthIn(max = 760.dp),

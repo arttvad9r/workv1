@@ -72,6 +72,12 @@
     <string name="pattern_no_changes">В выбранном диапазоне нет пустых дней</string>
     <string name="pattern_apply_error">Не удалось применить график</string>
     <string name="pattern_undo_error">Не удалось отменить заполнение графика</string>
+    <string name="statistics_title">Статистика месяца</string>
+    <string name="statistics_time">Время и оплата</string>
+    <string name="statistics_days">Дни</string>
+    <string name="statistics_average_shift">Средняя смена</string>
+    <string name="statistics_longest_shift">Самая длинная смена</string>
+    <string name="statistics_note">Средняя и самая длинная смена считаются только по рабочим дням с ненулевой длительностью.</string>
     <string name="tap_day_hint">Нажмите на день, чтобы добавить часы</string>
     <string name="data_error">Не удалось прочитать данные</string>
     <string name="save_error">Не удалось сохранить данные</string>
