@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
@@ -123,6 +124,7 @@ private fun DayCell(
         modifier = modifier
             .padding(2.dp)
             .height(50.dp)
+            .testTag("day-$date")
             .semantics {
                 contentDescription = description
                 selected = isSelected
