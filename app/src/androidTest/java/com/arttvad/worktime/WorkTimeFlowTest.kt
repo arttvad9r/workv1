@@ -32,13 +32,13 @@ class WorkTimeFlowTest {
     private val today: LocalDate = LocalDate.now()
     private val dayTag: String = "day-$today"
 
+    private val application: WorkTimeApplication
+        get() = InstrumentationRegistry.getInstrumentation()
+            .targetContext
+            .applicationContext as WorkTimeApplication
+
     private val repository: WorkDayRepository
-        get() {
-            val application = InstrumentationRegistry.getInstrumentation()
-                .targetContext
-                .applicationContext as WorkTimeApplication
-            return application.container.workDayRepository
-        }
+        get() = application.container.workDayRepository
 
     @Before
     fun clearTestDay() {
@@ -71,6 +71,53 @@ class WorkTimeFlowTest {
                 }.getOrDefault(false)
             }
             onRoot().tryPerformAccessibilityChecks()
+        }
+    }
+
+    @Test
+    fun paymentSettingsAreAccessibleAndPersistAcrossRelaunch() = runEmptyComposeUiTest {
+        enableAccessibilityChecks()
+        val targetContext = InstrumentationRegistry.getInstrumentation().targetContext
+        val settingsLabel = targetContext.getString(R.string.settings)
+        val originalPayment = currentPayment()
+
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use {
+                onNodeWithContentDescription(settingsLabel).performClick()
+                waitUntil(timeoutMillis = 5_000) {
+                    runCatching {
+                        onNodeWithTag("settings-hourly-rate").assertExists()
+                        true
+                    }.getOrDefault(false)
+                }
+                onRoot().tryPerformAccessibilityChecks()
+
+                onNodeWithTag("settings-hourly-rate").performTextReplacement("12.50")
+                onNodeWithTag("settings-currency").performTextReplacement("EUR")
+                onNodeWithTag("settings-save").performClick()
+
+                waitUntil(timeoutMillis = 5_000) {
+                    currentPayment() == (1_250L to "EUR")
+                }
+            }
+
+            ActivityScenario.launch(MainActivity::class.java).use {
+                onNodeWithContentDescription(settingsLabel).performClick()
+                waitUntil(timeoutMillis = 5_000) {
+                    runCatching {
+                        onNodeWithTag("settings-currency").assertTextContains("EUR")
+                        true
+                    }.getOrDefault(false)
+                }
+                onNodeWithTag("settings-hourly-rate").assertTextContains("12.5")
+            }
+        } finally {
+            runBlocking {
+                application.container.preferencesRepository.updatePayment(
+                    hourlyRateMinor = originalPayment.first,
+                    currencyCode = originalPayment.second,
+                )
+            }
         }
     }
 
@@ -194,5 +241,10 @@ class WorkTimeFlowTest {
         repository.observeMonth(YearMonth.from(today))
             .first()
             .firstOrNull { it.date == today }
+    }
+
+    private fun currentPayment(): Pair<Long?, String> = runBlocking {
+        val preferences = application.container.preferencesRepository.preferences.first()
+        preferences.hourlyRateMinor to preferences.currencyCode
     }
 }
