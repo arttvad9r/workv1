@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringArrayResource
@@ -25,6 +26,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.calendar.MonthGridBuilder
@@ -42,6 +44,8 @@ internal fun MonthCalendar(
     val weekdayNames = stringArrayResource(R.array.weekday_short)
     val cells = remember(month) { MonthGridBuilder.build(month) }
     val today = remember { LocalDate.now() }
+    val largeFont = LocalDensity.current.fontScale >= 1.5f
+    val cellHeight = if (largeFont) 80.dp else 50.dp
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth()) {
@@ -66,7 +70,7 @@ internal fun MonthCalendar(
                         Spacer(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(54.dp),
+                                .height(cellHeight),
                         )
                     } else {
                         DayCell(
@@ -75,6 +79,7 @@ internal fun MonthCalendar(
                             isToday = cell.date == today,
                             isSelected = cell.date == selectedDate,
                             onClick = { onDaySelected(cell.date) },
+                            height = cellHeight,
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -91,6 +96,7 @@ private fun DayCell(
     isToday: Boolean,
     isSelected: Boolean,
     onClick: () -> Unit,
+    height: Dp,
     modifier: Modifier = Modifier,
 ) {
     val worked = entry?.workedMinutes ?: 0
@@ -123,7 +129,7 @@ private fun DayCell(
         onClick = onClick,
         modifier = modifier
             .padding(2.dp)
-            .height(50.dp)
+            .height(height)
             .testTag("day-$date")
             .semantics {
                 contentDescription = description
