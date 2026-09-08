@@ -18,9 +18,10 @@
 - базовую почасовую ставку и валюту в DataStore;
 - компактную месячную сводку по часам, переработке и заработку;
 - подробную статистику месяца и года как вторичную поверхность;
-- CSV-экспорт месяца через системный Android document picker;
+- CSV- и XLSX-экспорт месяца через системный Android document picker;
 - одностраничный A4 PDF-отчёт месяца через системный Android document picker;
-- отсутствие broad storage permissions для экспортных flows;
+- versioned резервную копию всех записей и настроек оплаты с восстановлением через системный document picker;
+- отсутствие broad storage permissions для экспортных и backup flows;
 - adaptive Compose UI, edge-to-edge и светлую/тёмную системную тему;
 - автоматические accessibility checks и проверки font scale 200% для критических поверхностей;
 - unit/instrumentation CI на Android API 36;
@@ -34,6 +35,7 @@
 - [`docs/TECHNICAL_SPEC.md`](docs/TECHNICAL_SPEC.md) — стек, архитектура, данные, тестирование, безопасность и quality gates.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — этапы реализации и критерии готовности.
 - [`docs/CSV_EXPORT.md`](docs/CSV_EXPORT.md) — стабильный формат месячного CSV-экспорта и его money/data semantics.
+- [`docs/BACKUP_FORMAT.md`](docs/BACKUP_FORMAT.md) — versioned формат резервной копии и правила безопасного восстановления.
 
 ## Базовые принципы
 

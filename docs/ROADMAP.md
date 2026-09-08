@@ -103,11 +103,14 @@
 - [x] detailed month statistics;
 - [x] detailed year statistics with 12-month breakdown;
 - [x] CSV month export;
-- [ ] XLSX export;
+- [x] XLSX month export — dependency-free production OOXML writer, opened and validated by Apache POI 5.5.1 in JVM tests only;
 - [x] PDF month report — one-page A4 report generated with platform `PdfDocument` and validated with `PdfRenderer`;
-- [ ] complete Android share/document-provider verification — CSV and PDF use `ActivityResultContracts.CreateDocument`, but manual round-trip through representative external document providers is still pending;
-- [ ] backup/restore;
-- [x] export correctness tests: deterministic month filtering/sorting, effective per-day rate/earnings, CSV escaping and PDF report-model validation;
+- [ ] complete Android share/document-provider verification — exports and backup use Activity Result document contracts, but manual round-trip through representative external document providers is still pending;
+- [x] versioned full backup/restore of WorkDay records + base rate/currency through the system document picker;
+- [x] restore validates the entire backup before mutation and requires explicit destructive confirmation;
+- [x] Room bulk replacement is transactional; cross-store runtime failure uses compensating rollback for Room + DataStore snapshots;
+- [x] deterministic backup codec/compatibility tests, invalid-format rejection and rollback tests;
+- [x] export correctness tests: deterministic month filtering/sorting, effective per-day rate/earnings, CSV escaping, XLSX workbook compatibility and PDF report-model validation;
 - [x] automated PDF validity check through Android `PdfRenderer`;
 - [x] automated check that the app requests no broad storage permission.
 
@@ -142,7 +145,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-После успешного CI PDF-среза последней полностью runtime-проверенной продуктовой ревизией должна быть `7a93583b306d90a9c6bb0e3356903f40cd11dffe`. Этот текст публикуется только после фактически зелёного run данной ревизии.
+Последняя полностью runtime-проверенная продуктовая ревизия после backup/restore gate: `ff76464df6a7aeaed3af72de933f77c52ffc8da5`. Документационный commit публикуется только после фактически зелёного CI этой ревизии.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -152,7 +155,7 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, CSV export surface, PDF generation/validity, accessibility основных поверхностей и доступность primary actions при font scale 200%.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, export surfaces, PDF generation/validity, backup/restore against real Room + DataStore, destructive restore confirmation, accessibility основных поверхностей и доступность primary actions при font scale 200%.
 
 Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
@@ -160,6 +163,7 @@ Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA
 
 ## Explicitly deferred
 
+- strict cross-store crash-atomic restore journal (current Room + DataStore runtime failures use compensating rollback);
 - employer/team SaaS;
 - invoices;
 - geofencing;
