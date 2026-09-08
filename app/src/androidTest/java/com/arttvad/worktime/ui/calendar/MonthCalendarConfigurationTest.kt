@@ -56,6 +56,32 @@ class MonthCalendarConfigurationTest {
     }
 
     @Test
+    fun dateShortcutDialogRemainsUsableAtTwoHundredPercentFontScale() {
+        composeRule.setContent {
+            WorkTimeTheme(darkTheme = false) {
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.FontScale(2f),
+                ) {
+                    DateShortcutDialog(
+                        initialDate = LocalDate.of(2026, 9, 8),
+                        onDismiss = {},
+                        onDateSelected = {},
+                    )
+                }
+            }
+        }
+
+        composeRule
+            .onNodeWithTag("date-shortcut-picker")
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag("date-shortcut-confirm")
+            .assertIsDisplayed()
+            .assertIsEnabled()
+    }
+
+    @Test
     fun dayEditorPrimaryActionRemainsReachableAtTwoHundredPercentFontScale() {
         val date = LocalDate.of(2026, 9, 8)
         val entry = WorkDay(
