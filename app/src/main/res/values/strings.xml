@@ -72,11 +72,16 @@
     <string name="pattern_no_changes">В выбранном диапазоне нет пустых дней</string>
     <string name="pattern_apply_error">Не удалось применить график</string>
     <string name="pattern_undo_error">Не удалось отменить заполнение графика</string>
-    <string name="statistics_title">Статистика месяца</string>
+    <string name="statistics_title">Статистика</string>
+    <string name="statistics_scope_month">Месяц</string>
+    <string name="statistics_scope_year">Год</string>
     <string name="statistics_time">Время и оплата</string>
+    <string name="statistics_year_totals">Итоги за год</string>
     <string name="statistics_days">Дни</string>
+    <string name="statistics_months">По месяцам</string>
     <string name="statistics_average_shift">Средняя смена</string>
     <string name="statistics_longest_shift">Самая длинная смена</string>
+    <string name="statistics_month_time">%1$s · рабочих дней: %2$d</string>
     <string name="statistics_note">Средняя и самая длинная смена считаются только по рабочим дням с ненулевой длительностью.</string>
     <string name="export_csv">Экспорт CSV</string>
     <string name="export_success">CSV сохранён</string>

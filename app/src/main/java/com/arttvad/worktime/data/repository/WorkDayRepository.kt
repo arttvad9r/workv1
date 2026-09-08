@@ -5,12 +5,14 @@ import com.arttvad.worktime.data.local.WorkDayEntity
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
+import java.time.Year
 import java.time.YearMonth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 interface WorkDayRepository {
     fun observeMonth(month: YearMonth): Flow<List<WorkDay>>
+    fun observeYear(year: Year): Flow<List<WorkDay>>
     suspend fun upsert(day: WorkDay)
     suspend fun delete(date: LocalDate)
     suspend fun insertMissing(days: List<WorkDay>): List<LocalDate>
@@ -20,11 +22,15 @@ interface WorkDayRepository {
 class RoomWorkDayRepository(
     private val dao: WorkDayDao,
 ) : WorkDayRepository {
-    override fun observeMonth(month: YearMonth): Flow<List<WorkDay>> {
-        val first = month.atDay(1).toString()
-        val last = month.atEndOfMonth().toString()
-        return dao.observeRange(first, last).map { entities -> entities.map(WorkDayEntity::toDomain) }
-    }
+    override fun observeMonth(month: YearMonth): Flow<List<WorkDay>> =
+        observeRange(month.atDay(1), month.atEndOfMonth())
+
+    override fun observeYear(year: Year): Flow<List<WorkDay>> =
+        observeRange(year.atDay(1), year.atMonth(12).atEndOfMonth())
+
+    private fun observeRange(first: LocalDate, last: LocalDate): Flow<List<WorkDay>> =
+        dao.observeRange(first.toString(), last.toString())
+            .map { entities -> entities.map(WorkDayEntity::toDomain) }
 
     override suspend fun upsert(day: WorkDay) {
         dao.upsert(day.toEntity())

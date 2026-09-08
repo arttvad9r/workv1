@@ -194,6 +194,7 @@ fun WorkTimeScreen(
         MonthStatisticsSheet(
             month = uiState.visibleMonth,
             statistics = uiState.detailedStatistics,
+            yearStatistics = uiState.detailedYearStatistics,
             preferences = uiState.preferences,
             onDismiss = { statisticsOpen = false },
             onExportCsv = {

@@ -8,6 +8,8 @@ import com.arttvad.worktime.data.preferences.WorkPreferencesRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatistics
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatisticsCalculator
+import com.arttvad.worktime.domain.calculation.DetailedYearStatistics
+import com.arttvad.worktime.domain.calculation.DetailedYearStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.MonthSummaryCalculator
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
@@ -15,6 +17,7 @@ import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import java.time.LocalDate
+import java.time.Year
 import java.time.YearMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +26,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -33,6 +38,7 @@ data class CalendarUiState(
     val selectedDate: LocalDate? = null,
     val summary: MonthSummary = MonthSummary(),
     val detailedStatistics: DetailedMonthStatistics = DetailedMonthStatistics(),
+    val detailedYearStatistics: DetailedYearStatistics = DetailedYearStatistics(Year.now()),
     val preferences: WorkPreferences = WorkPreferences(),
 )
 
@@ -48,6 +54,12 @@ sealed interface CalendarEvent {
     data class EntryDeleted(val entry: WorkDay) : CalendarEvent
     data class PatternApplied(val insertedDates: List<LocalDate>) : CalendarEvent
 }
+
+private data class CalendarPeriodData(
+    val month: YearMonth,
+    val monthDays: List<WorkDay>,
+    val yearDays: List<WorkDay>,
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CalendarViewModel(
@@ -68,19 +80,42 @@ class CalendarViewModel(
             }
     }
 
-    val uiState = combine(
+    private val yearEntries = visibleMonth
+        .map { month -> Year.of(month.year) }
+        .distinctUntilChanged()
+        .flatMapLatest { year ->
+            workDayRepository.observeYear(year)
+                .catch {
+                    mutableEvents.emit(CalendarEvent.DataError)
+                    emit(emptyList())
+                }
+        }
+
+    private val periodData = combine(
         visibleMonth,
         monthEntries,
+        yearEntries,
+    ) { month, monthDays, yearDays ->
+        CalendarPeriodData(month, monthDays, yearDays)
+    }
+
+    val uiState = combine(
+        periodData,
         preferencesRepository.preferences,
         selectedDate,
-    ) { month, days, preferences, selected ->
+    ) { data, preferences, selected ->
         CalendarUiState(
-            visibleMonth = month,
-            entries = days.associateBy(WorkDay::date),
+            visibleMonth = data.month,
+            entries = data.monthDays.associateBy(WorkDay::date),
             selectedDate = selected,
-            summary = MonthSummaryCalculator.calculate(days, preferences.hourlyRateMinor),
+            summary = MonthSummaryCalculator.calculate(data.monthDays, preferences.hourlyRateMinor),
             detailedStatistics = DetailedMonthStatisticsCalculator.calculate(
-                days,
+                data.monthDays,
+                preferences.hourlyRateMinor,
+            ),
+            detailedYearStatistics = DetailedYearStatisticsCalculator.calculate(
+                Year.of(data.month.year),
+                data.yearDays,
                 preferences.hourlyRateMinor,
             ),
             preferences = preferences,
