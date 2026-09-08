@@ -1,5 +1,6 @@
 package com.arttvad.worktime.data.repository
 
+import com.arttvad.worktime.data.local.DEFAULT_PROFILE_ID
 import com.arttvad.worktime.data.local.WorkDayDao
 import com.arttvad.worktime.data.local.WorkDayEntity
 import com.arttvad.worktime.domain.model.WorkDay
@@ -23,6 +24,7 @@ interface WorkDayRepository {
 
 class RoomWorkDayRepository(
     private val dao: WorkDayDao,
+    private val profileId: Long = DEFAULT_PROFILE_ID,
 ) : WorkDayRepository {
     override fun observeMonth(month: YearMonth): Flow<List<WorkDay>> =
         observeRange(month.atDay(1), month.atEndOfMonth())
@@ -31,29 +33,30 @@ class RoomWorkDayRepository(
         observeRange(year.atDay(1), year.atMonth(12).atEndOfMonth())
 
     private fun observeRange(first: LocalDate, last: LocalDate): Flow<List<WorkDay>> =
-        dao.observeRange(first.toString(), last.toString())
+        dao.observeRange(profileId, first.toString(), last.toString())
             .map { entities -> entities.map(WorkDayEntity::toDomain) }
 
     override suspend fun snapshotAll(): List<WorkDay> =
-        dao.getAll().map(WorkDayEntity::toDomain)
+        dao.getAll(profileId).map(WorkDayEntity::toDomain)
 
     override suspend fun upsert(day: WorkDay) {
-        dao.upsert(day.toEntity())
+        dao.upsert(day.toEntity(profileId))
     }
 
     override suspend fun delete(date: LocalDate) {
-        dao.deleteByDate(date.toString())
+        dao.deleteByDate(profileId, date.toString())
     }
 
     override suspend fun insertMissing(days: List<WorkDay>): List<LocalDate> =
-        dao.insertMissing(days.map(WorkDay::toEntity)).map(LocalDate::parse)
+        dao.insertMissing(profileId, days.map { day -> day.toEntity(profileId) })
+            .map(LocalDate::parse)
 
     override suspend fun deleteAll(dates: List<LocalDate>) {
-        dao.deleteByDates(dates.map(LocalDate::toString))
+        dao.deleteByDates(profileId, dates.map(LocalDate::toString))
     }
 
     override suspend fun replaceAll(days: List<WorkDay>) {
-        dao.replaceAll(days.map(WorkDay::toEntity))
+        dao.replaceAll(profileId, days.map { day -> day.toEntity(profileId) })
     }
 }
 
@@ -67,7 +70,8 @@ private fun WorkDayEntity.toDomain() = WorkDay(
     type = WorkDayType.valueOf(dayType),
 )
 
-private fun WorkDay.toEntity() = WorkDayEntity(
+private fun WorkDay.toEntity(profileId: Long) = WorkDayEntity(
+    profileId = profileId,
     date = date.toString(),
     workedMinutes = workedMinutes,
     overtimeMinutes = overtimeMinutes,

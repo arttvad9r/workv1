@@ -29,7 +29,7 @@ class WorkTimeDatabaseMigrationTest {
     }
 
     @Test
-    fun migration1To3PreservesExistingRowsAndDefaultsLegacyEntriesToWork() {
+    fun migration1To4PreservesRowsAndAssignsLegacyDataToDefaultProfile() {
         val databaseFile = context.getDatabasePath(DatabaseName)
         databaseFile.parentFile?.mkdirs()
 
@@ -65,17 +65,22 @@ class WorkTimeDatabaseMigrationTest {
             .addMigrations(
                 WorkTimeDatabase.MIGRATION_1_2,
                 WorkTimeDatabase.MIGRATION_2_3,
+                WorkTimeDatabase.MIGRATION_3_4,
             )
             .build()
 
         try {
             val migrated = runBlocking {
                 database.workDayDao()
-                    .observeRange("2026-09-01", "2026-09-30")
+                    .observeRange(DEFAULT_PROFILE_ID, "2026-09-01", "2026-09-30")
                     .first()
                     .single()
             }
+            val profile = runBlocking {
+                database.workProfileDao().getById(DEFAULT_PROFILE_ID)
+            }
 
+            assertEquals(DEFAULT_PROFILE_ID, migrated.profileId)
             assertEquals("2026-09-08", migrated.date)
             assertEquals(480, migrated.workedMinutes)
             assertEquals(30, migrated.overtimeMinutes)
@@ -83,6 +88,8 @@ class WorkTimeDatabaseMigrationTest {
             assertEquals(1234L, migrated.updatedAtEpochMillis)
             assertNull(migrated.hourlyRateOverrideMinor)
             assertEquals("WORK", migrated.dayType)
+            assertEquals(DEFAULT_PROFILE_NAME, profile?.name)
+            assertEquals(0L, profile?.createdAtEpochMillis)
         } finally {
             database.close()
         }

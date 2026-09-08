@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class WorkDayDaoBulkTest {
     @Test
-    fun insertMissingPreservesExistingRowsAndUndoDeletesOnlyInsertedRows() {
+    fun insertMissingAndUndoAreScopedToProfile() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val database = Room.inMemoryDatabaseBuilder(
             context,
@@ -22,6 +22,7 @@ class WorkDayDaoBulkTest {
         try {
             val dao = database.workDayDao()
             val existing = WorkDayEntity(
+                profileId = DEFAULT_PROFILE_ID,
                 date = "2026-09-08",
                 workedMinutes = 600,
                 overtimeMinutes = 60,
@@ -39,6 +40,7 @@ class WorkDayDaoBulkTest {
                     hourlyRateOverrideMinor = null,
                 ),
                 WorkDayEntity(
+                    profileId = DEFAULT_PROFILE_ID,
                     date = "2026-09-09",
                     workedMinutes = 480,
                     overtimeMinutes = 0,
@@ -47,6 +49,7 @@ class WorkDayDaoBulkTest {
                     dayType = "WORK",
                 ),
                 WorkDayEntity(
+                    profileId = DEFAULT_PROFILE_ID,
                     date = "2026-09-10",
                     workedMinutes = 0,
                     overtimeMinutes = 0,
@@ -58,23 +61,48 @@ class WorkDayDaoBulkTest {
 
             val inserted = runBlocking {
                 dao.upsert(existing)
-                dao.insertMissing(generated)
+                dao.insertMissing(DEFAULT_PROFILE_ID, generated)
             }
 
             assertEquals(listOf("2026-09-09", "2026-09-10"), inserted)
 
             val afterApply = runBlocking {
-                dao.observeRange("2026-09-08", "2026-09-10").first()
+                dao.observeRange(
+                    DEFAULT_PROFILE_ID,
+                    "2026-09-08",
+                    "2026-09-10",
+                ).first()
             }
             assertEquals(3, afterApply.size)
             assertEquals(existing, afterApply.first { it.date == existing.date })
 
-            runBlocking { dao.deleteByDates(inserted) }
+            runBlocking { dao.deleteByDates(DEFAULT_PROFILE_ID, inserted) }
 
             val afterUndo = runBlocking {
-                dao.observeRange("2026-09-08", "2026-09-10").first()
+                dao.observeRange(
+                    DEFAULT_PROFILE_ID,
+                    "2026-09-08",
+                    "2026-09-10",
+                ).first()
             }
             assertEquals(listOf(existing), afterUndo)
+
+            val secondProfileId = 2L
+            val secondProfileDay = existing.copy(
+                profileId = secondProfileId,
+                workedMinutes = 300,
+                note = "second profile",
+            )
+            runBlocking { dao.upsert(secondProfileDay) }
+
+            val defaultProfileRows = runBlocking {
+                dao.observeRange(DEFAULT_PROFILE_ID, existing.date, existing.date).first()
+            }
+            val secondProfileRows = runBlocking {
+                dao.observeRange(secondProfileId, existing.date, existing.date).first()
+            }
+            assertEquals(listOf(existing), defaultProfileRows)
+            assertEquals(listOf(secondProfileDay), secondProfileRows)
         } finally {
             database.close()
         }
