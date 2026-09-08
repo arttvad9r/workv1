@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
+import com.arttvad.worktime.domain.calculation.MoneyFormatter
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.WorkDay
 import java.time.LocalDate
@@ -45,8 +46,9 @@ import java.time.LocalDate
 fun DayEditorSheet(
     date: LocalDate,
     entry: WorkDay?,
+    currencyCode: String,
     onDismiss: () -> Unit,
-    onSave: (LocalDate, Int, Int, String) -> Unit,
+    onSave: (LocalDate, Int, Int, String, Long?) -> Unit,
     onDelete: (LocalDate) -> Unit,
 ) {
     ModalBottomSheet(
@@ -63,6 +65,7 @@ fun DayEditorSheet(
         DayEditorContent(
             date = date,
             entry = entry,
+            currencyCode = currencyCode,
             onDismiss = onDismiss,
             onSave = onSave,
             onDelete = onDelete,
@@ -77,8 +80,9 @@ fun DayEditorSheet(
 fun DayEditorContent(
     date: LocalDate,
     entry: WorkDay?,
+    currencyCode: String,
     onDismiss: () -> Unit,
-    onSave: (LocalDate, Int, Int, String) -> Unit,
+    onSave: (LocalDate, Int, Int, String, Long?) -> Unit,
     onDelete: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,11 +104,31 @@ fun DayEditorContent(
     var noteExpanded by rememberSaveable(date.toString()) {
         mutableStateOf(entry?.note?.isNotBlank() == true)
     }
+    var rateOverrideExpanded by rememberSaveable(date.toString(), entry?.updatedAtEpochMillis) {
+        mutableStateOf(entry?.hourlyRateOverrideMinor != null)
+    }
+    var rateOverrideInput by rememberSaveable(date.toString(), entry?.updatedAtEpochMillis) {
+        mutableStateOf(
+            runCatching {
+                MoneyFormatter.formatRateInput(entry?.hourlyRateOverrideMinor, currencyCode)
+            }.getOrDefault(""),
+        )
+    }
 
     val workedTotal = parseDuration(workedHours, workedMinutes)
     val overtimeTotal = parseDuration(overtimeHours, overtimeMinutes, allowZero = true)
     val workedTouched = workedHours.isNotBlank() || workedMinutes.isNotBlank()
     val overtimeTouched = overtimeHours.isNotBlank() || overtimeMinutes.isNotBlank()
+    val rateOverrideMinor = if (!rateOverrideExpanded || rateOverrideInput.isBlank()) {
+        null
+    } else {
+        runCatching {
+            MoneyFormatter.parseMajorToMinor(rateOverrideInput, currencyCode)
+        }.getOrNull()
+    }
+    val rateOverrideValid = !rateOverrideExpanded ||
+        rateOverrideInput.isBlank() ||
+        rateOverrideMinor != null
 
     val validationMessage = when {
         workedTouched && workedTotal == null -> stringResource(R.string.invalid_duration)
@@ -118,7 +142,8 @@ fun DayEditorContent(
     val canSave = workedTotal != null &&
         workedTotal > 0 &&
         overtimeTotal != null &&
-        WorkDayValidator.validate(workedTotal, overtimeTotal) == null
+        WorkDayValidator.validate(workedTotal, overtimeTotal) == null &&
+        rateOverrideValid
 
     val focusManager = LocalFocusManager.current
 
@@ -196,12 +221,56 @@ fun DayEditorContent(
             }
         }
 
+        if (rateOverrideExpanded) {
+            OutlinedTextField(
+                value = rateOverrideInput,
+                onValueChange = { value ->
+                    rateOverrideInput = value
+                        .filter { it.isDigit() || it == ',' || it == '.' }
+                        .take(16)
+                },
+                label = { Text(stringResource(R.string.day_rate_override)) },
+                suffix = { Text(currencyCode) },
+                singleLine = true,
+                isError = !rateOverrideValid,
+                supportingText = if (!rateOverrideValid) {
+                    { Text(stringResource(R.string.invalid_day_rate)) }
+                } else {
+                    null
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Decimal,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("day-editor-rate-override"),
+            )
+            TextButton(
+                onClick = {
+                    rateOverrideInput = ""
+                    rateOverrideExpanded = false
+                },
+                modifier = Modifier.testTag("day-editor-use-base-rate"),
+            ) {
+                Text(stringResource(R.string.use_base_rate))
+            }
+        } else {
+            TextButton(
+                onClick = { rateOverrideExpanded = true },
+                modifier = Modifier.testTag("day-editor-add-rate-override"),
+            ) {
+                Text(stringResource(R.string.add_day_rate_override))
+            }
+        }
+
         Button(
             onClick = {
                 val work = workedTotal ?: return@Button
                 val overtime = overtimeTotal ?: return@Button
                 focusManager.clearFocus()
-                onSave(date, work, overtime, note)
+                onSave(date, work, overtime, note, rateOverrideMinor)
             },
             enabled = canSave,
             modifier = Modifier

@@ -17,7 +17,9 @@ class AppContainer(context: Context) {
         context.applicationContext,
         WorkTimeDatabase::class.java,
         "worktime.db",
-    ).build()
+    )
+        .addMigrations(WorkTimeDatabase.MIGRATION_1_2)
+        .build()
 
     val workDayRepository: WorkDayRepository = RoomWorkDayRepository(database.workDayDao())
     val preferencesRepository = WorkPreferencesRepository(context.applicationContext)

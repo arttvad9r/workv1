@@ -54,7 +54,7 @@ fun WorkTimeScreen(
     onVisibleMonthChanged: (YearMonth) -> Unit,
     onDaySelected: (LocalDate) -> Unit,
     onDismissDayEditor: () -> Unit,
-    onSaveDay: (LocalDate, Int, Int, String) -> Unit,
+    onSaveDay: (LocalDate, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
     onUpdatePayment: (Long?, String) -> Unit,
 ) {
@@ -113,6 +113,7 @@ fun WorkTimeScreen(
                     DayEditorSheet(
                         date = selectedDate,
                         entry = uiState.entries[selectedDate],
+                        currencyCode = uiState.preferences.currencyCode,
                         onDismiss = onDismissDayEditor,
                         onSave = onSaveDay,
                         onDelete = onDeleteDay,
@@ -161,7 +162,7 @@ private fun ExpandedMonthLayout(
     pagerState: PagerState,
     onDaySelected: (LocalDate) -> Unit,
     onDismissDayEditor: () -> Unit,
-    onSaveDay: (LocalDate, Int, Int, String) -> Unit,
+    onSaveDay: (LocalDate, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
 ) {
     Row(
@@ -208,6 +209,7 @@ private fun ExpandedMonthLayout(
                 DayEditorContent(
                     date = selectedDate,
                     entry = uiState.entries[selectedDate],
+                    currencyCode = uiState.preferences.currencyCode,
                     onDismiss = onDismissDayEditor,
                     onSave = onSaveDay,
                     onDelete = onDeleteDay,

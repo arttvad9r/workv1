@@ -122,6 +122,50 @@ class WorkTimeFlowTest {
     }
 
     @Test
+    fun dayRateOverridePersistsAcrossRelaunch() = runEmptyComposeUiTest {
+        val originalPayment = currentPayment()
+
+        try {
+            runBlocking {
+                application.container.preferencesRepository.updatePayment(
+                    hourlyRateMinor = originalPayment.first,
+                    currencyCode = "EUR",
+                )
+            }
+
+            ActivityScenario.launch(MainActivity::class.java).use {
+                onNodeWithTag(dayTag).performClick()
+                onNodeWithTag("day-editor-worked-hours").performTextInput("8")
+                onNodeWithTag("day-editor-add-rate-override").performClick()
+                onNodeWithTag("day-editor-rate-override").performTextInput("20")
+                onNodeWithTag("day-editor-save").performClick()
+
+                waitUntil(timeoutMillis = 5_000) {
+                    currentEntry()?.hourlyRateOverrideMinor == 2_000L
+                }
+            }
+
+            ActivityScenario.launch(MainActivity::class.java).use {
+                onNodeWithTag(dayTag).performClick()
+                waitUntil(timeoutMillis = 5_000) {
+                    runCatching {
+                        onNodeWithTag("day-editor-rate-override").assertExists()
+                        true
+                    }.getOrDefault(false)
+                }
+                onNodeWithTag("day-editor-rate-override").assertTextContains("20")
+            }
+        } finally {
+            runBlocking {
+                application.container.preferencesRepository.updatePayment(
+                    hourlyRateMinor = originalPayment.first,
+                    currencyCode = originalPayment.second,
+                )
+            }
+        }
+    }
+
+    @Test
     fun saveEditDeleteUndoAndRelaunch() = runEmptyComposeUiTest {
         val undoLabel = InstrumentationRegistry.getInstrumentation()
             .targetContext

@@ -7,8 +7,11 @@ object MonthSummaryCalculator {
     fun calculate(days: List<WorkDay>, hourlyRateMinor: Long?): MonthSummary {
         val worked = days.sumOf { it.workedMinutes }
         val overtime = days.sumOf { it.overtimeMinutes }
-        val earnings = hourlyRateMinor?.let { rate ->
-            days.fold(0L) { total, day ->
+        val earnings = when {
+            days.isEmpty() -> hourlyRateMinor?.let { 0L }
+            days.any { day -> day.hourlyRateOverrideMinor == null && hourlyRateMinor == null } -> null
+            else -> days.fold(0L) { total, day ->
+                val rate = day.hourlyRateOverrideMinor ?: requireNotNull(hourlyRateMinor)
                 Math.addExact(total, EarningsCalculator.calculateMinor(day.workedMinutes, rate))
             }
         }

@@ -8,4 +8,5 @@ data class WorkDay(
     val overtimeMinutes: Int,
     val note: String,
     val updatedAtEpochMillis: Long,
+    val hourlyRateOverrideMinor: Long? = null,
 )

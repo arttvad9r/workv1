@@ -90,8 +90,15 @@ class CalendarViewModel(
         selectedDate.value = null
     }
 
-    fun saveDay(date: LocalDate, workedMinutes: Int, overtimeMinutes: Int, note: String) {
+    fun saveDay(
+        date: LocalDate,
+        workedMinutes: Int,
+        overtimeMinutes: Int,
+        note: String,
+        hourlyRateOverrideMinor: Long?,
+    ) {
         if (WorkDayValidator.validate(workedMinutes, overtimeMinutes) != null) return
+        if (hourlyRateOverrideMinor != null && hourlyRateOverrideMinor < 0) return
 
         viewModelScope.launch {
             runCatching {
@@ -102,6 +109,7 @@ class CalendarViewModel(
                         overtimeMinutes = overtimeMinutes,
                         note = note.trim(),
                         updatedAtEpochMillis = System.currentTimeMillis(),
+                        hourlyRateOverrideMinor = hourlyRateOverrideMinor,
                     ),
                 )
             }.onSuccess {

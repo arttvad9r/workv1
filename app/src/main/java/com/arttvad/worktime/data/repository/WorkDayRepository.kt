@@ -38,6 +38,7 @@ private fun WorkDayEntity.toDomain() = WorkDay(
     overtimeMinutes = overtimeMinutes,
     note = note,
     updatedAtEpochMillis = updatedAtEpochMillis,
+    hourlyRateOverrideMinor = hourlyRateOverrideMinor,
 )
 
 private fun WorkDay.toEntity() = WorkDayEntity(
@@ -46,4 +47,5 @@ private fun WorkDay.toEntity() = WorkDayEntity(
     overtimeMinutes = overtimeMinutes,
     note = note,
     updatedAtEpochMillis = updatedAtEpochMillis,
+    hourlyRateOverrideMinor = hourlyRateOverrideMinor,
 )
