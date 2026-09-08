@@ -34,6 +34,17 @@
     <string name="add_day_rate_override">Другая ставка</string>
     <string name="use_base_rate">Использовать базовую ставку</string>
     <string name="invalid_day_rate">Введите корректную неотрицательную ставку</string>
+    <string name="settings_data_title">Данные</string>
+    <string name="backup_description">Резервная копия содержит все записи рабочего времени, базовую ставку и валюту.</string>
+    <string name="backup_create">Создать резервную копию</string>
+    <string name="backup_restore">Восстановить из копии</string>
+    <string name="backup_success">Резервная копия сохранена</string>
+    <string name="backup_error">Не удалось создать резервную копию</string>
+    <string name="backup_restore_success">Данные восстановлены</string>
+    <string name="backup_restore_error">Не удалось восстановить резервную копию</string>
+    <string name="backup_restore_confirm_title">Восстановить данные?</string>
+    <string name="backup_restore_confirm_message">Все текущие записи рабочего времени, базовая ставка и валюта будут заменены данными из выбранной резервной копии.</string>
+    <string name="backup_restore_confirm_action">Восстановить</string>
     <string name="day_type_work">Работа</string>
     <string name="day_type_day_off">Выходной</string>
     <string name="day_type_vacation">Отпуск</string>

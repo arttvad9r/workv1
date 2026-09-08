@@ -18,6 +18,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +43,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,6 +55,8 @@ import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import com.arttvad.worktime.exporting.MonthPdfExporter
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.Dispatchers
@@ -73,10 +78,13 @@ fun WorkTimeScreen(
     onDeleteDay: (LocalDate) -> Unit,
     onUpdatePayment: (Long?, String) -> Unit,
     onApplyPattern: (List<ShiftPatternDay>) -> Unit,
+    onWriteBackup: suspend (OutputStream) -> Result<Int>,
+    onRestoreBackup: suspend (InputStream) -> Result<Int>,
 ) {
     var paymentSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
     var statisticsOpen by rememberSaveable { mutableStateOf(false) }
+    var restoreConfirmationOpen by rememberSaveable { mutableStateOf(false) }
     var pendingCsv by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingXlsx by rememberSaveable { mutableStateOf<ByteArray?>(null) }
     var pendingPdf by rememberSaveable { mutableStateOf<ByteArray?>(null) }
@@ -93,6 +101,11 @@ fun WorkTimeScreen(
     val xlsxExportError = stringResource(R.string.export_xlsx_error)
     val pdfExportSuccess = stringResource(R.string.export_pdf_success)
     val pdfExportError = stringResource(R.string.export_pdf_error)
+    val backupSuccess = stringResource(R.string.backup_success)
+    val backupError = stringResource(R.string.backup_error)
+    val restoreSuccess = stringResource(R.string.backup_restore_success)
+    val restoreBackupError = stringResource(R.string.backup_restore_error)
+
     val csvDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv"),
     ) { uri ->
@@ -152,6 +165,43 @@ fun WorkTimeScreen(
                 }
                 snackbarHostState.showSnackbar(
                     message = if (result.isSuccess) pdfExportSuccess else pdfExportError,
+                )
+            }
+        }
+    }
+    val backupDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)?.use { output ->
+                            onWriteBackup(output).getOrThrow()
+                        } ?: error("Document provider returned no output stream")
+                    }
+                }
+                snackbarHostState.showSnackbar(
+                    message = if (result.isSuccess) backupSuccess else backupError,
+                )
+            }
+        }
+    }
+    val restoreDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            onRestoreBackup(input).getOrThrow()
+                        } ?: error("Document provider returned no input stream")
+                    }
+                }
+                if (result.isSuccess) paymentSettingsOpen = false
+                snackbarHostState.showSnackbar(
+                    message = if (result.isSuccess) restoreSuccess else restoreBackupError,
                 )
             }
         }
@@ -230,6 +280,39 @@ fun WorkTimeScreen(
             onSave = { rate, currency ->
                 onUpdatePayment(rate, currency)
                 paymentSettingsOpen = false
+            },
+            onCreateBackup = {
+                backupDocumentLauncher.launch("worktime-backup-${LocalDate.now()}.wtbk")
+            },
+            onRestoreBackup = { restoreConfirmationOpen = true },
+        )
+    }
+
+    if (restoreConfirmationOpen) {
+        AlertDialog(
+            onDismissRequest = { restoreConfirmationOpen = false },
+            title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
+            text = { Text(stringResource(R.string.backup_restore_confirm_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        restoreConfirmationOpen = false
+                        restoreDocumentLauncher.launch(
+                            arrayOf("application/octet-stream", "application/x-worktime-backup"),
+                        )
+                    },
+                    modifier = Modifier.testTag("backup-restore-confirm"),
+                ) {
+                    Text(stringResource(R.string.backup_restore_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { restoreConfirmationOpen = false },
+                    modifier = Modifier.testTag("backup-restore-cancel"),
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
             },
         )
     }

@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.arttvad.worktime.data.preferences.WorkPreferences
 import com.arttvad.worktime.data.preferences.WorkPreferencesRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
+import com.arttvad.worktime.domain.backup.BackupPayment
+import com.arttvad.worktime.domain.backup.BackupRestoreCoordinator
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatistics
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.DetailedYearStatistics
@@ -16,6 +18,8 @@ import com.arttvad.worktime.domain.model.MonthSummary
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
+import java.io.InputStream
+import java.io.OutputStream
 import java.time.LocalDate
 import java.time.Year
 import java.time.YearMonth
@@ -27,6 +31,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -71,6 +76,25 @@ class CalendarViewModel(
     private val mutableEvents = MutableSharedFlow<CalendarEvent>(extraBufferCapacity = 1)
 
     val events: Flow<CalendarEvent> = mutableEvents
+
+    private val backupRestoreCoordinator = BackupRestoreCoordinator(
+        snapshotDays = workDayRepository::snapshotAll,
+        replaceDays = workDayRepository::replaceAll,
+        readPayment = {
+            preferencesRepository.preferences.first().let { preferences ->
+                BackupPayment(
+                    hourlyRateMinor = preferences.hourlyRateMinor,
+                    currencyCode = preferences.currencyCode,
+                )
+            }
+        },
+        replacePayment = { payment ->
+            preferencesRepository.updatePayment(
+                hourlyRateMinor = payment.hourlyRateMinor,
+                currencyCode = payment.currencyCode,
+            )
+        },
+    )
 
     private val monthEntries = visibleMonth.flatMapLatest { month ->
         workDayRepository.observeMonth(month)
@@ -239,6 +263,14 @@ class CalendarViewModel(
             }
         }
     }
+
+    suspend fun writeBackup(output: OutputStream): Result<Int> =
+        backupRestoreCoordinator.writeBackup(output)
+
+    suspend fun restoreBackup(input: InputStream): Result<Int> =
+        backupRestoreCoordinator.restoreBackup(input).onSuccess {
+            selectedDate.value = null
+        }
 
     companion object {
         fun factory(

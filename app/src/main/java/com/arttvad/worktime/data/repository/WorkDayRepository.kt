@@ -13,10 +13,12 @@ import kotlinx.coroutines.flow.map
 interface WorkDayRepository {
     fun observeMonth(month: YearMonth): Flow<List<WorkDay>>
     fun observeYear(year: Year): Flow<List<WorkDay>>
+    suspend fun snapshotAll(): List<WorkDay>
     suspend fun upsert(day: WorkDay)
     suspend fun delete(date: LocalDate)
     suspend fun insertMissing(days: List<WorkDay>): List<LocalDate>
     suspend fun deleteAll(dates: List<LocalDate>)
+    suspend fun replaceAll(days: List<WorkDay>)
 }
 
 class RoomWorkDayRepository(
@@ -32,6 +34,9 @@ class RoomWorkDayRepository(
         dao.observeRange(first.toString(), last.toString())
             .map { entities -> entities.map(WorkDayEntity::toDomain) }
 
+    override suspend fun snapshotAll(): List<WorkDay> =
+        dao.getAll().map(WorkDayEntity::toDomain)
+
     override suspend fun upsert(day: WorkDay) {
         dao.upsert(day.toEntity())
     }
@@ -45,6 +50,10 @@ class RoomWorkDayRepository(
 
     override suspend fun deleteAll(dates: List<LocalDate>) {
         dao.deleteByDates(dates.map(LocalDate::toString))
+    }
+
+    override suspend fun replaceAll(days: List<WorkDay>) {
+        dao.replaceAll(days.map(WorkDay::toEntity))
     }
 }
 

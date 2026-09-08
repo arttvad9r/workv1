@@ -15,8 +15,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +47,8 @@ fun PaymentSettingsSheet(
     preferences: WorkPreferences,
     onDismiss: () -> Unit,
     onSave: (Long?, String) -> Unit,
+    onCreateBackup: () -> Unit = {},
+    onRestoreBackup: () -> Unit = {},
 ) {
     var currencyCode by rememberSaveable(preferences.currencyCode) {
         mutableStateOf(preferences.currencyCode)
@@ -171,6 +175,34 @@ fun PaymentSettingsSheet(
                 ) {
                     Text(stringResource(R.string.save))
                 }
+            }
+
+            HorizontalDivider()
+
+            Text(
+                text = stringResource(R.string.settings_data_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = stringResource(R.string.backup_description),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(
+                onClick = onCreateBackup,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings-backup-create"),
+            ) {
+                Text(stringResource(R.string.backup_create))
+            }
+            OutlinedButton(
+                onClick = onRestoreBackup,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings-backup-restore"),
+            ) {
+                Text(stringResource(R.string.backup_restore))
             }
         }
     }

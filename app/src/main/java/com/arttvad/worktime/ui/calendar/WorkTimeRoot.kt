@@ -74,5 +74,7 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
         onDeleteDay = viewModel::deleteDay,
         onUpdatePayment = viewModel::updatePayment,
         onApplyPattern = viewModel::applyPattern,
+        onWriteBackup = viewModel::writeBackup,
+        onRestoreBackup = viewModel::restoreBackup,
     )
 }

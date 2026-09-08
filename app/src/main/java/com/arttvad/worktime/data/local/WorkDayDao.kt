@@ -17,6 +17,9 @@ abstract class WorkDayDao {
     )
     abstract fun observeRange(fromDate: String, toDate: String): Flow<List<WorkDayEntity>>
 
+    @Query("SELECT * FROM work_days ORDER BY date ASC")
+    abstract suspend fun getAll(): List<WorkDayEntity>
+
     @Upsert
     abstract suspend fun upsert(entity: WorkDayEntity)
 
@@ -32,6 +35,9 @@ abstract class WorkDayDao {
     @Query("DELETE FROM work_days WHERE date IN (:dates)")
     protected abstract suspend fun deleteByDatesInternal(dates: List<String>)
 
+    @Query("DELETE FROM work_days")
+    protected abstract suspend fun deleteAllInternal()
+
     @Transaction
     open suspend fun insertMissing(entities: List<WorkDayEntity>): List<String> {
         if (entities.isEmpty()) return emptyList()
@@ -44,5 +50,11 @@ abstract class WorkDayDao {
     @Transaction
     open suspend fun deleteByDates(dates: List<String>) {
         if (dates.isNotEmpty()) deleteByDatesInternal(dates)
+    }
+
+    @Transaction
+    open suspend fun replaceAll(entities: List<WorkDayEntity>) {
+        deleteAllInternal()
+        if (entities.isNotEmpty()) upsertAll(entities)
     }
 }
