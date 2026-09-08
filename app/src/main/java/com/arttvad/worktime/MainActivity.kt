@@ -35,6 +35,7 @@ class MainActivity : ComponentActivity() {
                     factory = CalendarViewModel.factory(
                         workDayRepository = container.workDayRepository,
                         preferencesRepository = container.preferencesRepository,
+                        profileBackupRepository = container.profileBackupRepository,
                     ),
                 )
                 WorkTimeRoot(

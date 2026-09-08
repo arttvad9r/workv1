@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.arttvad.worktime.data.preferences.WorkPreferences
 import com.arttvad.worktime.data.preferences.WorkPreferencesRepository
+import com.arttvad.worktime.data.repository.ProfileBackupRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
 import com.arttvad.worktime.domain.backup.BackupPayment
 import com.arttvad.worktime.domain.backup.BackupRestoreCoordinator
+import com.arttvad.worktime.domain.backup.BackupSettings
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatistics
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.DetailedYearStatistics
@@ -71,6 +73,7 @@ private data class CalendarPeriodData(
 class CalendarViewModel(
     private val workDayRepository: WorkDayRepository,
     private val preferencesRepository: WorkPreferencesRepository,
+    private val profileBackupRepository: ProfileBackupRepository,
 ) : ViewModel() {
     private val visibleMonth = MutableStateFlow(YearMonth.now())
     private val selectedDate = MutableStateFlow<LocalDate?>(null)
@@ -79,20 +82,24 @@ class CalendarViewModel(
     val events: Flow<CalendarEvent> = mutableEvents
 
     private val backupRestoreCoordinator = BackupRestoreCoordinator(
-        snapshotDays = workDayRepository::snapshotAll,
-        replaceDays = workDayRepository::replaceAll,
-        readPayment = {
+        snapshotProfiles = profileBackupRepository::snapshotAll,
+        replaceProfiles = profileBackupRepository::replaceAll,
+        readSettings = {
             preferencesRepository.preferences.first().let { preferences ->
-                BackupPayment(
-                    hourlyRateMinor = preferences.hourlyRateMinor,
-                    currencyCode = preferences.currencyCode,
+                BackupSettings(
+                    payment = BackupPayment(
+                        hourlyRateMinor = preferences.hourlyRateMinor,
+                        currencyCode = preferences.currencyCode,
+                    ),
+                    activeProfileId = preferences.activeProfileId,
                 )
             }
         },
-        replacePayment = { payment ->
-            preferencesRepository.updatePayment(
-                hourlyRateMinor = payment.hourlyRateMinor,
-                currencyCode = payment.currencyCode,
+        replaceSettings = { settings ->
+            preferencesRepository.updatePaymentAndProfile(
+                hourlyRateMinor = settings.payment.hourlyRateMinor,
+                currencyCode = settings.payment.currencyCode,
+                profileId = settings.activeProfileId,
             )
         },
     )
@@ -313,11 +320,16 @@ class CalendarViewModel(
         fun factory(
             workDayRepository: WorkDayRepository,
             preferencesRepository: WorkPreferencesRepository,
+            profileBackupRepository: ProfileBackupRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 require(modelClass.isAssignableFrom(CalendarViewModel::class.java))
-                return CalendarViewModel(workDayRepository, preferencesRepository) as T
+                return CalendarViewModel(
+                    workDayRepository = workDayRepository,
+                    preferencesRepository = preferencesRepository,
+                    profileBackupRepository = profileBackupRepository,
+                ) as T
             }
         }
     }

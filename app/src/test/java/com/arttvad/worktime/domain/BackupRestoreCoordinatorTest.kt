@@ -1,7 +1,9 @@
 package com.arttvad.worktime.domain
 
 import com.arttvad.worktime.domain.backup.BackupPayment
+import com.arttvad.worktime.domain.backup.BackupProfile
 import com.arttvad.worktime.domain.backup.BackupRestoreCoordinator
+import com.arttvad.worktime.domain.backup.BackupSettings
 import com.arttvad.worktime.domain.backup.WorkTimeBackup
 import com.arttvad.worktime.domain.backup.WorkTimeBackupCodec
 import com.arttvad.worktime.domain.model.WorkDay
@@ -17,67 +19,74 @@ import org.junit.Test
 class BackupRestoreCoordinatorTest {
     @Test
     fun invalidBackupIsRejectedBeforeAnyMutation() = runBlocking {
-        var replaceDaysCalled = false
-        var replacePaymentCalled = false
+        var replaceProfilesCalled = false
+        var replaceSettingsCalled = false
         val coordinator = BackupRestoreCoordinator(
-            snapshotDays = { emptyList() },
-            replaceDays = { replaceDaysCalled = true },
-            readPayment = { BackupPayment(null, "EUR") },
-            replacePayment = { replacePaymentCalled = true },
+            snapshotProfiles = { profiles("previous") },
+            replaceProfiles = { replaceProfilesCalled = true },
+            readSettings = { settings(1_500L, "EUR", 1L) },
+            replaceSettings = { replaceSettingsCalled = true },
         )
 
         val result = coordinator.restoreBackup(ByteArrayInputStream(byteArrayOf(1, 2, 3, 4)))
 
         assertTrue(result.isFailure)
-        assertFalse(replaceDaysCalled)
-        assertFalse(replacePaymentCalled)
+        assertFalse(replaceProfilesCalled)
+        assertFalse(replaceSettingsCalled)
     }
 
     @Test
-    fun paymentFailureRollsBackPreviouslyReplacedDaysAndPayment() = runBlocking {
-        val previousDays = listOf(workDay(LocalDate.of(2026, 8, 1), 480))
-        val restoredDays = listOf(workDay(LocalDate.of(2026, 9, 1), 600))
-        val previousPayment = BackupPayment(1_500L, "EUR")
-        val restoredPayment = BackupPayment(2_000L, "USD")
-        var currentDays = previousDays
-        var currentPayment = previousPayment
-        var failNextPaymentReplacement = true
+    fun settingsFailureRollsBackProfileGraphAndSettings() = runBlocking {
+        val previousProfiles = profiles("previous")
+        val restoredProfiles = listOf(
+            BackupProfile(1L, "Основная работа", 0L, listOf(workDay("2026-09-01", 600, "restored"))),
+            BackupProfile(2L, "Подработка", 2L, listOf(workDay("2026-09-01", 240, "second"))),
+        )
+        val previousSettings = settings(1_500L, "EUR", 1L)
+        val restoredSettings = settings(2_000L, "USD", 2L)
+        var currentProfiles = previousProfiles
+        var currentSettings = previousSettings
+        var failNextSettingsReplacement = true
 
         val coordinator = BackupRestoreCoordinator(
-            snapshotDays = { currentDays },
-            replaceDays = { days -> currentDays = days },
-            readPayment = { currentPayment },
-            replacePayment = { payment ->
-                if (failNextPaymentReplacement) {
-                    failNextPaymentReplacement = false
+            snapshotProfiles = { currentProfiles },
+            replaceProfiles = { profiles -> currentProfiles = profiles },
+            readSettings = { currentSettings },
+            replaceSettings = { value ->
+                if (failNextSettingsReplacement) {
+                    failNextSettingsReplacement = false
                     throw IllegalStateException("simulated DataStore failure")
                 }
-                currentPayment = payment
+                currentSettings = value
             },
         )
         val bytes = WorkTimeBackupCodec.encode(
             WorkTimeBackup(
-                payment = restoredPayment,
-                days = restoredDays,
+                payment = restoredSettings.payment,
+                activeProfileId = restoredSettings.activeProfileId,
+                profiles = restoredProfiles,
             ),
         )
 
         val result = coordinator.restoreBackup(ByteArrayInputStream(bytes))
 
         assertTrue(result.isFailure)
-        assertEquals(previousDays, currentDays)
-        assertEquals(previousPayment, currentPayment)
+        assertEquals(previousProfiles, currentProfiles)
+        assertEquals(previousSettings, currentSettings)
     }
 
     @Test
-    fun writeBackupUsesCurrentSnapshots() = runBlocking {
-        val days = listOf(workDay(LocalDate.of(2026, 9, 3), 720))
-        val payment = BackupPayment(1_750L, "EUR")
+    fun writeBackupUsesAllProfilesAndReturnsTotalDayCount() = runBlocking {
+        val profiles = listOf(
+            BackupProfile(1L, "Основная работа", 0L, listOf(workDay("2026-09-03", 720, "one"))),
+            BackupProfile(2L, "Подработка", 2L, listOf(workDay("2026-09-04", 240, "two"))),
+        )
+        val settings = settings(1_750L, "EUR", 2L)
         val coordinator = BackupRestoreCoordinator(
-            snapshotDays = { days },
-            replaceDays = {},
-            readPayment = { payment },
-            replacePayment = {},
+            snapshotProfiles = { profiles },
+            replaceProfiles = {},
+            readSettings = { settings },
+            replaceSettings = {},
         )
         val output = ByteArrayOutputStream()
 
@@ -85,16 +94,26 @@ class BackupRestoreCoordinatorTest {
         val decoded = WorkTimeBackupCodec.decode(output.toByteArray())
 
         assertTrue(result.isSuccess)
-        assertEquals(1, result.getOrThrow())
-        assertEquals(days, decoded.days)
-        assertEquals(payment, decoded.payment)
+        assertEquals(2, result.getOrThrow())
+        assertEquals(profiles, decoded.profiles)
+        assertEquals(settings.activeProfileId, decoded.activeProfileId)
+        assertEquals(settings.payment, decoded.payment)
     }
 
-    private fun workDay(date: LocalDate, workedMinutes: Int) = WorkDay(
-        date = date,
+    private fun profiles(note: String) = listOf(
+        BackupProfile(1L, "Основная работа", 0L, listOf(workDay("2026-08-01", 480, note))),
+    )
+
+    private fun settings(rate: Long?, currency: String, profileId: Long) = BackupSettings(
+        payment = BackupPayment(rate, currency),
+        activeProfileId = profileId,
+    )
+
+    private fun workDay(date: String, workedMinutes: Int, note: String) = WorkDay(
+        date = LocalDate.parse(date),
         workedMinutes = workedMinutes,
         overtimeMinutes = 0,
-        note = "",
+        note = note,
         updatedAtEpochMillis = 1L,
     )
 }

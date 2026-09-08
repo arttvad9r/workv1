@@ -1,11 +1,15 @@
 package com.arttvad.worktime.domain
 
 import com.arttvad.worktime.domain.backup.BackupPayment
+import com.arttvad.worktime.domain.backup.BackupProfile
 import com.arttvad.worktime.domain.backup.WorkTimeBackup
 import com.arttvad.worktime.domain.backup.WorkTimeBackupCodec
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -14,28 +18,33 @@ import org.junit.Test
 
 class WorkTimeBackupCodecTest {
     @Test
-    fun roundTripIsDeterministicAndPreservesAllSupportedFields() {
+    fun v2RoundTripIsDeterministicAndPreservesProfiles() {
+        val sameDate = LocalDate.of(2026, 9, 1)
         val backup = WorkTimeBackup(
-            payment = BackupPayment(
-                hourlyRateMinor = 1_500L,
-                currencyCode = "eur",
-            ),
-            days = listOf(
-                WorkDay(
-                    date = LocalDate.of(2026, 9, 2),
-                    workedMinutes = 0,
-                    overtimeMinutes = 0,
-                    note = "Отпуск & заметка",
-                    updatedAtEpochMillis = 2L,
-                    type = WorkDayType.VACATION,
+            payment = BackupPayment(1_500L, "eur"),
+            activeProfileId = 2L,
+            profiles = listOf(
+                BackupProfile(
+                    id = 2L,
+                    name = "Подработка",
+                    createdAtEpochMillis = 2L,
+                    days = listOf(workDay(sameDate, 240, "secondary")),
                 ),
-                WorkDay(
-                    date = LocalDate.of(2026, 9, 1),
-                    workedMinutes = 480,
-                    overtimeMinutes = 60,
-                    note = "Работа",
-                    updatedAtEpochMillis = 1L,
-                    hourlyRateOverrideMinor = 2_000L,
+                BackupProfile(
+                    id = 1L,
+                    name = "Основная работа",
+                    createdAtEpochMillis = 0L,
+                    days = listOf(
+                        WorkDay(
+                            date = LocalDate.of(2026, 9, 2),
+                            workedMinutes = 0,
+                            overtimeMinutes = 0,
+                            note = "Отпуск",
+                            updatedAtEpochMillis = 3L,
+                            type = WorkDayType.VACATION,
+                        ),
+                        workDay(sameDate, 480, "primary", 2_000L),
+                    ),
                 ),
             ),
         )
@@ -46,11 +55,25 @@ class WorkTimeBackupCodecTest {
 
         assertArrayEquals(first, second)
         assertEquals("EUR", decoded.payment.currencyCode)
+        assertEquals(2L, decoded.activeProfileId)
+        assertEquals(listOf(1L, 2L), decoded.profiles.map { it.id })
+        assertEquals(3, decoded.totalDays)
+        assertEquals("primary", decoded.profiles.first().days.first().note)
+        assertEquals("secondary", decoded.profiles.last().days.single().note)
+    }
+
+    @Test
+    fun readsLegacyV1AsDefaultProfile() {
+        val bytes = legacyV1Bytes()
+
+        val decoded = WorkTimeBackupCodec.decode(bytes)
+
+        assertEquals("EUR", decoded.payment.currencyCode)
         assertEquals(1_500L, decoded.payment.hourlyRateMinor)
-        assertEquals(listOf(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 2)), decoded.days.map { it.date })
-        assertEquals(2_000L, decoded.days.first().hourlyRateOverrideMinor)
-        assertEquals(WorkDayType.VACATION, decoded.days.last().type)
-        assertEquals("Отпуск & заметка", decoded.days.last().note)
+        assertEquals(1L, decoded.activeProfileId)
+        assertEquals(1, decoded.profiles.size)
+        assertEquals("Основная работа", decoded.profiles.single().name)
+        assertEquals("legacy", decoded.profiles.single().days.single().note)
     }
 
     @Test
@@ -58,7 +81,8 @@ class WorkTimeBackupCodecTest {
         val bytes = WorkTimeBackupCodec.encode(
             WorkTimeBackup(
                 payment = BackupPayment(null, "EUR"),
-                days = emptyList(),
+                activeProfileId = 1L,
+                profiles = listOf(BackupProfile(1L, "Основная работа", 0L, emptyList())),
             ),
         ).copyOf()
         ByteBuffer.wrap(bytes).putInt(4, 99)
@@ -69,23 +93,69 @@ class WorkTimeBackupCodecTest {
     }
 
     @Test
-    fun encodeRejectsDuplicateDates() {
+    fun duplicateDateIsRejectedWithinProfileButAllowedAcrossProfiles() {
         val date = LocalDate.of(2026, 9, 1)
-        val day = WorkDay(
-            date = date,
-            workedMinutes = 480,
-            overtimeMinutes = 0,
-            note = "",
-            updatedAtEpochMillis = 1L,
-        )
-
+        val day = workDay(date, 480, "one")
         assertThrows(IllegalArgumentException::class.java) {
             WorkTimeBackupCodec.encode(
                 WorkTimeBackup(
                     payment = BackupPayment(null, "EUR"),
-                    days = listOf(day, day.copy(updatedAtEpochMillis = 2L)),
+                    activeProfileId = 1L,
+                    profiles = listOf(
+                        BackupProfile(1L, "Основная работа", 0L, listOf(day, day.copy(note = "duplicate"))),
+                    ),
                 ),
             )
         }
+
+        WorkTimeBackupCodec.encode(
+            WorkTimeBackup(
+                payment = BackupPayment(null, "EUR"),
+                activeProfileId = 1L,
+                profiles = listOf(
+                    BackupProfile(1L, "Основная работа", 0L, listOf(day)),
+                    BackupProfile(2L, "Подработка", 1L, listOf(day.copy(note = "other profile"))),
+                ),
+            ),
+        )
+    }
+
+    private fun workDay(
+        date: LocalDate,
+        minutes: Int,
+        note: String,
+        override: Long? = null,
+    ) = WorkDay(
+        date = date,
+        workedMinutes = minutes,
+        overtimeMinutes = 0,
+        note = note,
+        updatedAtEpochMillis = 1L,
+        hourlyRateOverrideMinor = override,
+    )
+
+    private fun legacyV1Bytes(): ByteArray = ByteArrayOutputStream().use { bytes ->
+        DataOutputStream(bytes).use { output ->
+            output.writeInt(0x5754424B)
+            output.writeInt(1)
+            writeString(output, "EUR")
+            output.writeBoolean(true)
+            output.writeLong(1_500L)
+            output.writeInt(1)
+            writeString(output, "2026-09-01")
+            writeString(output, "WORK")
+            output.writeInt(480)
+            output.writeInt(0)
+            output.writeBoolean(false)
+            output.writeLong(1L)
+            writeString(output, "legacy")
+        }
+        bytes.toByteArray()
+    }
+
+    private fun writeString(output: DataOutputStream, value: String) {
+        val encoded = value.toByteArray(StandardCharsets.UTF_8)
+        output.writeInt(encoded.size)
+        output.write(encoded)
     }
 }

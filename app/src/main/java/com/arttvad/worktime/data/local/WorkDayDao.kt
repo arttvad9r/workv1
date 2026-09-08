@@ -25,8 +25,14 @@ abstract class WorkDayDao {
     @Query("SELECT * FROM work_days WHERE profileId = :profileId ORDER BY date ASC")
     abstract suspend fun getAll(profileId: Long): List<WorkDayEntity>
 
+    @Query("SELECT * FROM work_days ORDER BY profileId ASC, date ASC")
+    abstract suspend fun getAllProfiles(): List<WorkDayEntity>
+
     @Upsert
     abstract suspend fun upsert(entity: WorkDayEntity)
+
+    @Upsert
+    abstract suspend fun upsertAll(entities: List<WorkDayEntity>)
 
     @Query("DELETE FROM work_days WHERE profileId = :profileId AND date = :date")
     abstract suspend fun deleteByDate(profileId: Long, date: String)
@@ -34,14 +40,14 @@ abstract class WorkDayDao {
     @Query("SELECT date FROM work_days WHERE profileId = :profileId AND date IN (:dates)")
     protected abstract suspend fun existingDates(profileId: Long, dates: List<String>): List<String>
 
-    @Upsert
-    protected abstract suspend fun upsertAll(entities: List<WorkDayEntity>)
-
     @Query("DELETE FROM work_days WHERE profileId = :profileId AND date IN (:dates)")
     protected abstract suspend fun deleteByDatesInternal(profileId: Long, dates: List<String>)
 
     @Query("DELETE FROM work_days WHERE profileId = :profileId")
     protected abstract suspend fun deleteAllInternal(profileId: Long)
+
+    @Query("DELETE FROM work_days")
+    abstract suspend fun deleteEverything()
 
     @Transaction
     open suspend fun insertMissing(profileId: Long, entities: List<WorkDayEntity>): List<String> {

@@ -5,6 +5,8 @@ import android.content.Context
 import androidx.room.Room
 import com.arttvad.worktime.data.local.WorkTimeDatabase
 import com.arttvad.worktime.data.preferences.WorkPreferencesRepository
+import com.arttvad.worktime.data.repository.ProfileBackupRepository
+import com.arttvad.worktime.data.repository.RoomProfileBackupRepository
 import com.arttvad.worktime.data.repository.RoomWorkDayRepository
 import com.arttvad.worktime.data.repository.RoomWorkProfileRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
@@ -34,4 +36,5 @@ class AppContainer(context: Context) {
         activeProfileId = preferencesRepository.preferences.map { it.activeProfileId },
     )
     val workProfileRepository: WorkProfileRepository = RoomWorkProfileRepository(database.workProfileDao())
+    val profileBackupRepository: ProfileBackupRepository = RoomProfileBackupRepository(database)
 }

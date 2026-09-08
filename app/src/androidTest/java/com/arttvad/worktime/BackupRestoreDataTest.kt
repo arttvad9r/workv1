@@ -3,7 +3,9 @@ package com.arttvad.worktime
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.arttvad.worktime.domain.backup.BackupPayment
+import com.arttvad.worktime.domain.backup.BackupProfile
 import com.arttvad.worktime.domain.backup.BackupRestoreCoordinator
+import com.arttvad.worktime.domain.backup.BackupSettings
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
 import java.io.ByteArrayInputStream
@@ -19,78 +21,108 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class BackupRestoreDataTest {
     @Test
-    fun backupRoundTripRestoresRoomAndPaymentSettings() = runBlocking {
+    fun backupRoundTripRestoresAllProfilesAndActiveSelection() = runBlocking {
         val application = ApplicationProvider.getApplicationContext<WorkTimeApplication>()
-        val workDays = application.container.workDayRepository
+        val profileBackup = application.container.profileBackupRepository
         val preferences = application.container.preferencesRepository
-        val originalDays = workDays.snapshotAll()
-        val originalPayment = preferences.preferences.first()
+        val originalProfiles = profileBackup.snapshotAll()
+        val originalSettings = preferences.preferences.first()
 
         val coordinator = BackupRestoreCoordinator(
-            snapshotDays = workDays::snapshotAll,
-            replaceDays = workDays::replaceAll,
-            readPayment = {
+            snapshotProfiles = profileBackup::snapshotAll,
+            replaceProfiles = profileBackup::replaceAll,
+            readSettings = {
                 preferences.preferences.first().let { value ->
-                    BackupPayment(value.hourlyRateMinor, value.currencyCode)
+                    BackupSettings(
+                        payment = BackupPayment(value.hourlyRateMinor, value.currencyCode),
+                        activeProfileId = value.activeProfileId,
+                    )
                 }
             },
-            replacePayment = { payment ->
-                preferences.updatePayment(payment.hourlyRateMinor, payment.currencyCode)
+            replaceSettings = { settings ->
+                preferences.updatePaymentAndProfile(
+                    hourlyRateMinor = settings.payment.hourlyRateMinor,
+                    currencyCode = settings.payment.currencyCode,
+                    profileId = settings.activeProfileId,
+                )
             },
         )
 
         try {
-            val backupDays = listOf(
-                WorkDay(
-                    date = LocalDate.of(2026, 1, 10),
-                    workedMinutes = 480,
-                    overtimeMinutes = 60,
-                    note = "backup-work",
-                    updatedAtEpochMillis = 10L,
-                    hourlyRateOverrideMinor = 2_000L,
+            val sameDate = LocalDate.of(2026, 1, 10)
+            val backupProfiles = listOf(
+                BackupProfile(
+                    id = 1L,
+                    name = "Основная работа",
+                    createdAtEpochMillis = 0L,
+                    days = listOf(
+                        WorkDay(
+                            date = sameDate,
+                            workedMinutes = 480,
+                            overtimeMinutes = 60,
+                            note = "primary",
+                            updatedAtEpochMillis = 10L,
+                            hourlyRateOverrideMinor = 2_000L,
+                        ),
+                    ),
                 ),
-                WorkDay(
-                    date = LocalDate.of(2026, 1, 11),
-                    workedMinutes = 0,
-                    overtimeMinutes = 0,
-                    note = "backup-vacation",
-                    updatedAtEpochMillis = 11L,
-                    type = WorkDayType.VACATION,
+                BackupProfile(
+                    id = 2L,
+                    name = "Подработка",
+                    createdAtEpochMillis = 20L,
+                    days = listOf(
+                        WorkDay(
+                            date = sameDate,
+                            workedMinutes = 0,
+                            overtimeMinutes = 0,
+                            note = "vacation",
+                            updatedAtEpochMillis = 11L,
+                            type = WorkDayType.VACATION,
+                        ),
+                    ),
                 ),
             )
-            workDays.replaceAll(backupDays)
-            preferences.updatePayment(1_500L, "EUR")
+            profileBackup.replaceAll(backupProfiles)
+            preferences.updatePaymentAndProfile(1_500L, "EUR", 2L)
 
             val output = ByteArrayOutputStream()
             assertEquals(2, coordinator.writeBackup(output).getOrThrow())
 
-            workDays.replaceAll(
+            profileBackup.replaceAll(
                 listOf(
-                    WorkDay(
-                        date = LocalDate.of(2026, 8, 1),
-                        workedMinutes = 720,
-                        overtimeMinutes = 0,
-                        note = "replacement",
-                        updatedAtEpochMillis = 12L,
+                    BackupProfile(
+                        id = 1L,
+                        name = "Temporary",
+                        createdAtEpochMillis = 99L,
+                        days = listOf(
+                            WorkDay(
+                                date = LocalDate.of(2026, 8, 1),
+                                workedMinutes = 720,
+                                overtimeMinutes = 0,
+                                note = "replacement",
+                                updatedAtEpochMillis = 12L,
+                            ),
+                        ),
                     ),
                 ),
             )
-            preferences.updatePayment(900L, "USD")
+            preferences.updatePaymentAndProfile(900L, "USD", 1L)
 
-            val restoreResult = coordinator.restoreBackup(
-                ByteArrayInputStream(output.toByteArray()),
-            )
+            val restoreResult = coordinator.restoreBackup(ByteArrayInputStream(output.toByteArray()))
 
             assertTrue(restoreResult.isSuccess)
             assertEquals(2, restoreResult.getOrThrow())
-            assertEquals(backupDays, workDays.snapshotAll())
-            assertEquals(1_500L, preferences.preferences.first().hourlyRateMinor)
-            assertEquals("EUR", preferences.preferences.first().currencyCode)
+            assertEquals(backupProfiles, profileBackup.snapshotAll())
+            val restoredSettings = preferences.preferences.first()
+            assertEquals(1_500L, restoredSettings.hourlyRateMinor)
+            assertEquals("EUR", restoredSettings.currencyCode)
+            assertEquals(2L, restoredSettings.activeProfileId)
         } finally {
-            workDays.replaceAll(originalDays)
-            preferences.updatePayment(
-                originalPayment.hourlyRateMinor,
-                originalPayment.currencyCode,
+            profileBackup.replaceAll(originalProfiles)
+            preferences.updatePaymentAndProfile(
+                originalSettings.hourlyRateMinor,
+                originalSettings.currencyCode,
+                originalSettings.activeProfileId,
             )
         }
     }

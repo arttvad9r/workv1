@@ -91,12 +91,19 @@ class WorkPreferencesRepository(
 
     suspend fun updatePayment(hourlyRateMinor: Long?, currencyCode: String) {
         context.workTimeDataStore.edit { values ->
-            if (hourlyRateMinor == null) {
-                values.remove(Keys.hourlyRateMinor)
-            } else {
-                values[Keys.hourlyRateMinor] = hourlyRateMinor
-            }
-            values[Keys.currencyCode] = currencyCode.uppercase(Locale.ROOT)
+            writePayment(values, hourlyRateMinor, currencyCode)
+        }
+    }
+
+    suspend fun updatePaymentAndProfile(
+        hourlyRateMinor: Long?,
+        currencyCode: String,
+        profileId: Long,
+    ) {
+        require(profileId > 0L) { "Profile id must be positive" }
+        context.workTimeDataStore.edit { values ->
+            writePayment(values, hourlyRateMinor, currencyCode)
+            values[Keys.activeProfileId] = profileId
         }
     }
 
@@ -137,6 +144,20 @@ class WorkPreferencesRepository(
             values.remove(Keys.activeShiftDate)
             values.remove(Keys.activeShiftStartedAt)
         }
+    }
+
+    private fun writePayment(
+        values: androidx.datastore.preferences.core.MutablePreferences,
+        hourlyRateMinor: Long?,
+        currencyCode: String,
+    ) {
+        if (hourlyRateMinor == null) {
+            values.remove(Keys.hourlyRateMinor)
+        } else {
+            require(hourlyRateMinor >= 0L) { "Hourly rate must be non-negative" }
+            values[Keys.hourlyRateMinor] = hourlyRateMinor
+        }
+        values[Keys.currencyCode] = currencyCode.uppercase(Locale.ROOT)
     }
 }
 

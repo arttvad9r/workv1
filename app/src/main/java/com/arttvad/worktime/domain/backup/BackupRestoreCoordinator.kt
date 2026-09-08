@@ -1,42 +1,53 @@
 package com.arttvad.worktime.domain.backup
 
-import com.arttvad.worktime.domain.model.WorkDay
 import java.io.InputStream
 import java.io.OutputStream
 
+data class BackupSettings(
+    val payment: BackupPayment,
+    val activeProfileId: Long,
+)
+
 class BackupRestoreCoordinator(
-    private val snapshotDays: suspend () -> List<WorkDay>,
-    private val replaceDays: suspend (List<WorkDay>) -> Unit,
-    private val readPayment: suspend () -> BackupPayment,
-    private val replacePayment: suspend (BackupPayment) -> Unit,
+    private val snapshotProfiles: suspend () -> List<BackupProfile>,
+    private val replaceProfiles: suspend (List<BackupProfile>) -> Unit,
+    private val readSettings: suspend () -> BackupSettings,
+    private val replaceSettings: suspend (BackupSettings) -> Unit,
 ) {
     suspend fun writeBackup(output: OutputStream): Result<Int> = runCatching {
-        val days = snapshotDays()
-        val payment = readPayment()
-        WorkTimeBackupCodec.write(
-            output = output,
-            backup = WorkTimeBackup(payment = payment, days = days),
+        val profiles = snapshotProfiles()
+        val settings = readSettings()
+        val backup = WorkTimeBackup(
+            payment = settings.payment,
+            activeProfileId = settings.activeProfileId,
+            profiles = profiles,
         )
-        days.size
+        WorkTimeBackupCodec.write(output, backup)
+        backup.totalDays
     }
 
     suspend fun restoreBackup(input: InputStream): Result<Int> {
         val backup = runCatching { WorkTimeBackupCodec.read(input) }
             .getOrElse { return Result.failure(it) }
-        val previousDays = runCatching { snapshotDays() }
+        val previousProfiles = runCatching { snapshotProfiles() }
             .getOrElse { return Result.failure(it) }
-        val previousPayment = runCatching { readPayment() }
+        val previousSettings = runCatching { readSettings() }
             .getOrElse { return Result.failure(it) }
 
         return try {
-            replaceDays(backup.days)
-            replacePayment(backup.payment)
-            Result.success(backup.days.size)
+            replaceProfiles(backup.profiles)
+            replaceSettings(
+                BackupSettings(
+                    payment = backup.payment,
+                    activeProfileId = backup.activeProfileId,
+                ),
+            )
+            Result.success(backup.totalDays)
         } catch (error: Throwable) {
-            runCatching { replacePayment(previousPayment) }
+            runCatching { replaceSettings(previousSettings) }
                 .exceptionOrNull()
                 ?.let(error::addSuppressed)
-            runCatching { replaceDays(previousDays) }
+            runCatching { replaceProfiles(previousProfiles) }
                 .exceptionOrNull()
                 ?.let(error::addSuppressed)
             Result.failure(error)
