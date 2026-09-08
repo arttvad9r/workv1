@@ -12,6 +12,7 @@ import com.arttvad.worktime.domain.model.MonthSummary
 import com.arttvad.worktime.domain.model.WorkDay
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,7 @@ sealed interface CalendarEvent {
     data class EntryDeleted(val entry: WorkDay) : CalendarEvent
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CalendarViewModel(
     private val workDayRepository: WorkDayRepository,
     private val preferencesRepository: WorkPreferencesRepository,
