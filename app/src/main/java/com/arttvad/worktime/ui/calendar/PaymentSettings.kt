@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -50,6 +49,7 @@ fun PaymentSettingsSheet(
     onCreateBackup: () -> Unit = {},
     onRestoreBackup: () -> Unit = {},
 ) {
+    var dataViewOpen by rememberSaveable { mutableStateOf(false) }
     var currencyCode by rememberSaveable(preferences.currencyCode) {
         mutableStateOf(preferences.currencyCode)
     }
@@ -60,21 +60,6 @@ fun PaymentSettingsSheet(
             }.getOrDefault(""),
         )
     }
-
-    val normalizedCurrency = currencyCode.trim().uppercase(Locale.ROOT)
-    val currencyValid = normalizedCurrency.length == 3 && runCatching {
-        Currency.getInstance(normalizedCurrency)
-    }.isSuccess
-    val parsedRate = if (rateInput.isBlank()) {
-        null
-    } else if (currencyValid) {
-        runCatching { MoneyFormatter.parseMajorToMinor(rateInput, normalizedCurrency) }.getOrNull()
-    } else {
-        null
-    }
-    val rateValid = rateInput.isBlank() || parsedRate != null
-    val canSave = currencyValid && rateValid
-    val focusManager = LocalFocusManager.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -95,115 +80,191 @@ fun PaymentSettingsSheet(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.settings_rate_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
-
-            OutlinedTextField(
-                value = rateInput,
-                onValueChange = { value ->
-                    rateInput = value.filter { it.isDigit() || it == ',' || it == '.' }.take(16)
-                },
-                label = { Text(stringResource(R.string.hourly_rate)) },
-                placeholder = { Text(stringResource(R.string.rate_hint)) },
-                singleLine = true,
-                isError = !rateValid,
-                supportingText = if (!rateValid) {
-                    { Text(stringResource(R.string.invalid_rate)) }
-                } else {
-                    null
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Next,
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("settings-hourly-rate"),
-            )
-
-            OutlinedTextField(
-                value = currencyCode,
-                onValueChange = { value ->
-                    currencyCode = value.filter(Char::isLetter).uppercase(Locale.ROOT).take(3)
-                },
-                label = { Text(stringResource(R.string.currency_code)) },
-                placeholder = { Text(stringResource(R.string.currency_hint)) },
-                singleLine = true,
-                isError = !currencyValid,
-                supportingText = if (!currencyValid) {
-                    { Text(stringResource(R.string.invalid_currency)) }
-                } else {
-                    null
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Ascii,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("settings-currency"),
-            )
-
-            if (rateInput.isNotBlank()) {
-                TextButton(onClick = { rateInput = "" }) {
-                    Text(stringResource(R.string.clear_rate))
-                }
+            if (dataViewOpen) {
+                DataSettingsContent(
+                    onBackToPayment = { dataViewOpen = false },
+                    onCreateBackup = onCreateBackup,
+                    onRestoreBackup = onRestoreBackup,
+                )
+            } else {
+                PaymentSettingsContent(
+                    preferences = preferences,
+                    currencyCode = currencyCode,
+                    onCurrencyChanged = { currencyCode = it },
+                    rateInput = rateInput,
+                    onRateChanged = { rateInput = it },
+                    onOpenData = { dataViewOpen = true },
+                    onDismiss = onDismiss,
+                    onSave = onSave,
+                )
             }
+        }
+    }
+}
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text(stringResource(R.string.cancel))
-                }
-                Button(
-                    onClick = {
-                        focusManager.clearFocus()
-                        onSave(parsedRate, normalizedCurrency)
-                    },
-                    enabled = canSave,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("settings-save"),
-                ) {
-                    Text(stringResource(R.string.save))
-                }
-            }
+@Composable
+private fun DataSettingsContent(
+    onBackToPayment: () -> Unit,
+    onCreateBackup: () -> Unit,
+    onRestoreBackup: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_data_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        TextButton(
+            onClick = onBackToPayment,
+            modifier = Modifier.testTag("settings-payment-open"),
+        ) {
+            Text(stringResource(R.string.settings_rate_title))
+        }
+    }
 
-            HorizontalDivider()
+    Text(
+        text = stringResource(R.string.backup_description),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    OutlinedButton(
+        onClick = onCreateBackup,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("settings-backup-create"),
+    ) {
+        Text(stringResource(R.string.backup_create))
+    }
+    OutlinedButton(
+        onClick = onRestoreBackup,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("settings-backup-restore"),
+    ) {
+        Text(stringResource(R.string.backup_restore))
+    }
+}
 
-            Text(
-                text = stringResource(R.string.settings_data_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = stringResource(R.string.backup_description),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedButton(
-                onClick = onCreateBackup,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("settings-backup-create"),
-            ) {
-                Text(stringResource(R.string.backup_create))
-            }
-            OutlinedButton(
-                onClick = onRestoreBackup,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("settings-backup-restore"),
-            ) {
-                Text(stringResource(R.string.backup_restore))
-            }
+@Composable
+private fun PaymentSettingsContent(
+    preferences: WorkPreferences,
+    currencyCode: String,
+    onCurrencyChanged: (String) -> Unit,
+    rateInput: String,
+    onRateChanged: (String) -> Unit,
+    onOpenData: () -> Unit,
+    onDismiss: () -> Unit,
+    onSave: (Long?, String) -> Unit,
+) {
+    val normalizedCurrency = currencyCode.trim().uppercase(Locale.ROOT)
+    val currencyValid = normalizedCurrency.length == 3 && runCatching {
+        Currency.getInstance(normalizedCurrency)
+    }.isSuccess
+    val parsedRate = if (rateInput.isBlank()) {
+        null
+    } else if (currencyValid) {
+        runCatching { MoneyFormatter.parseMajorToMinor(rateInput, normalizedCurrency) }.getOrNull()
+    } else {
+        null
+    }
+    val rateValid = rateInput.isBlank() || parsedRate != null
+    val canSave = currencyValid && rateValid
+    val focusManager = LocalFocusManager.current
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.settings_rate_title),
+            style = MaterialTheme.typography.titleLarge,
+        )
+        TextButton(
+            onClick = onOpenData,
+            modifier = Modifier.testTag("settings-data-open"),
+        ) {
+            Text(stringResource(R.string.settings_data_title))
+        }
+    }
+
+    OutlinedTextField(
+        value = rateInput,
+        onValueChange = { value ->
+            onRateChanged(value.filter { it.isDigit() || it == ',' || it == '.' }.take(16))
+        },
+        label = { Text(stringResource(R.string.hourly_rate)) },
+        placeholder = { Text(stringResource(R.string.rate_hint)) },
+        singleLine = true,
+        isError = !rateValid,
+        supportingText = if (!rateValid) {
+            { Text(stringResource(R.string.invalid_rate)) }
+        } else {
+            null
+        },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Decimal,
+            imeAction = ImeAction.Next,
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("settings-hourly-rate"),
+    )
+
+    OutlinedTextField(
+        value = currencyCode,
+        onValueChange = { value ->
+            onCurrencyChanged(value.filter(Char::isLetter).uppercase(Locale.ROOT).take(3))
+        },
+        label = { Text(stringResource(R.string.currency_code)) },
+        placeholder = { Text(stringResource(R.string.currency_hint)) },
+        singleLine = true,
+        isError = !currencyValid,
+        supportingText = if (!currencyValid) {
+            { Text(stringResource(R.string.invalid_currency)) }
+        } else {
+            null
+        },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Ascii,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("settings-currency"),
+    )
+
+    if (rateInput.isNotBlank()) {
+        TextButton(onClick = { onRateChanged("") }) {
+            Text(stringResource(R.string.clear_rate))
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(stringResource(R.string.cancel))
+        }
+        Button(
+            onClick = {
+                focusManager.clearFocus()
+                onSave(parsedRate, normalizedCurrency)
+            },
+            enabled = canSave,
+            modifier = Modifier
+                .weight(1f)
+                .testTag("settings-save"),
+        ) {
+            Text(stringResource(R.string.save))
         }
     }
 }

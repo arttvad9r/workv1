@@ -1,7 +1,8 @@
 package com.arttvad.worktime
 
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -24,6 +25,10 @@ class BackupRestoreUiFlowTest {
             .performClick()
 
         composeRule
+            .onNodeWithTag("settings-data-open")
+            .performClick()
+
+        composeRule
             .onNodeWithTag("settings-backup-restore")
             .performScrollTo()
             .performClick()
@@ -37,8 +42,10 @@ class BackupRestoreUiFlowTest {
             .performClick()
 
         composeRule
-            .onNodeWithTag("settings-backup-restore")
-            .performScrollTo()
+            .onNodeWithTag("backup-restore-confirm")
+            .assertDoesNotExist()
+        composeRule
+            .onNodeWithTag("settings-payment-open")
             .assertIsDisplayed()
     }
 }
