@@ -104,10 +104,11 @@
 - [x] detailed year statistics with 12-month breakdown;
 - [x] CSV month export;
 - [ ] XLSX export;
-- [ ] PDF report;
-- [ ] complete Android share/document-provider verification — `ActivityResultContracts.CreateDocument("text/csv")` integration is implemented, but a manual round-trip through representative external document providers is still pending;
+- [x] PDF month report — one-page A4 report generated with platform `PdfDocument` and validated with `PdfRenderer`;
+- [ ] complete Android share/document-provider verification — CSV and PDF use `ActivityResultContracts.CreateDocument`, but manual round-trip through representative external document providers is still pending;
 - [ ] backup/restore;
-- [x] export correctness unit tests: deterministic ordering, effective per-day rate/earnings, empty month and RFC-style escaping of comma/quote/newline fields;
+- [x] export correctness tests: deterministic month filtering/sorting, effective per-day rate/earnings, CSV escaping and PDF report-model validation;
+- [x] automated PDF validity check through Android `PdfRenderer`;
 - [x] automated check that the app requests no broad storage permission.
 
 ## Phase 5 — Convenience surfaces
@@ -141,7 +142,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-После успешного CI для годовой статистики последней полностью runtime-проверенной продуктовой ревизией должна быть `2f4d8681c97c1e7ef724e2dbf14b61451c2e538c`. Этот текст публикуется только после фактически зелёного run данной ревизии.
+После успешного CI PDF-среза последней полностью runtime-проверенной продуктовой ревизией должна быть `7a93583b306d90a9c6bb0e3356903f40cd11dffe`. Этот текст публикуется только после фактически зелёного run данной ревизии.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -151,7 +152,7 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, CSV export surface, accessibility основных поверхностей и доступность primary actions при font scale 200%.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, CSV export surface, PDF generation/validity, accessibility основных поверхностей и доступность primary actions при font scale 200%.
 
 Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 

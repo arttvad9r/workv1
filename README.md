@@ -18,7 +18,9 @@
 - базовую почасовую ставку и валюту в DataStore;
 - компактную месячную сводку по часам, переработке и заработку;
 - подробную статистику месяца и года как вторичную поверхность;
-- CSV-экспорт месяца через системный Android document picker без broad storage permissions;
+- CSV-экспорт месяца через системный Android document picker;
+- одностраничный A4 PDF-отчёт месяца через системный Android document picker;
+- отсутствие broad storage permissions для экспортных flows;
 - adaptive Compose UI, edge-to-edge и светлую/тёмную системную тему;
 - автоматические accessibility checks и проверки font scale 200% для критических поверхностей;
 - unit/instrumentation CI на Android API 36;
