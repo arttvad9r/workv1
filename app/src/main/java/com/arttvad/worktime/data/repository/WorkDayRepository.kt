@@ -8,7 +8,12 @@ import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 import java.time.Year
 import java.time.YearMonth
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 interface WorkDayRepository {
@@ -22,10 +27,15 @@ interface WorkDayRepository {
     suspend fun replaceAll(days: List<WorkDay>)
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RoomWorkDayRepository(
     private val dao: WorkDayDao,
-    private val profileId: Long = DEFAULT_PROFILE_ID,
+    activeProfileId: Flow<Long> = flowOf(DEFAULT_PROFILE_ID),
 ) : WorkDayRepository {
+    private val activeProfileId = activeProfileId
+        .map { profileId -> profileId.takeIf { it > 0L } ?: DEFAULT_PROFILE_ID }
+        .distinctUntilChanged()
+
     override fun observeMonth(month: YearMonth): Flow<List<WorkDay>> =
         observeRange(month.atDay(1), month.atEndOfMonth())
 
@@ -33,29 +43,39 @@ class RoomWorkDayRepository(
         observeRange(year.atDay(1), year.atMonth(12).atEndOfMonth())
 
     private fun observeRange(first: LocalDate, last: LocalDate): Flow<List<WorkDay>> =
-        dao.observeRange(profileId, first.toString(), last.toString())
-            .map { entities -> entities.map(WorkDayEntity::toDomain) }
+        activeProfileId.flatMapLatest { profileId ->
+            dao.observeRange(profileId, first.toString(), last.toString())
+                .map { entities -> entities.map(WorkDayEntity::toDomain) }
+        }
 
-    override suspend fun snapshotAll(): List<WorkDay> =
-        dao.getAll(profileId).map(WorkDayEntity::toDomain)
+    override suspend fun snapshotAll(): List<WorkDay> {
+        val profileId = activeProfileId.first()
+        return dao.getAll(profileId).map(WorkDayEntity::toDomain)
+    }
 
     override suspend fun upsert(day: WorkDay) {
+        val profileId = activeProfileId.first()
         dao.upsert(day.toEntity(profileId))
     }
 
     override suspend fun delete(date: LocalDate) {
+        val profileId = activeProfileId.first()
         dao.deleteByDate(profileId, date.toString())
     }
 
-    override suspend fun insertMissing(days: List<WorkDay>): List<LocalDate> =
-        dao.insertMissing(profileId, days.map { day -> day.toEntity(profileId) })
+    override suspend fun insertMissing(days: List<WorkDay>): List<LocalDate> {
+        val profileId = activeProfileId.first()
+        return dao.insertMissing(profileId, days.map { day -> day.toEntity(profileId) })
             .map(LocalDate::parse)
+    }
 
     override suspend fun deleteAll(dates: List<LocalDate>) {
+        val profileId = activeProfileId.first()
         dao.deleteByDates(profileId, dates.map(LocalDate::toString))
     }
 
     override suspend fun replaceAll(days: List<WorkDay>) {
+        val profileId = activeProfileId.first()
         dao.replaceAll(profileId, days.map { day -> day.toEntity(profileId) })
     }
 }
