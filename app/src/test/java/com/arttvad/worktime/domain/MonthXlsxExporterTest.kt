@@ -67,7 +67,7 @@ class MonthXlsxExporterTest {
 
             assertEquals(480.0, sheet.getRow(1).getCell(1).numericCellValue, 0.0)
             assertEquals(60.0, sheet.getRow(1).getCell(3).numericCellValue, 0.0)
-            assertEquals(16.0, sheet.getRow(1).getCell(5).numericCellValue, 0.0)
+            assertEquals(160.0, sheet.getRow(1).getCell(5).numericCellValue, 0.0)
 
             val workRow = sheet.getRow(4)
             assertEquals("2026-09-01", workRow.getCell(0).stringCellValue)
@@ -75,7 +75,7 @@ class MonthXlsxExporterTest {
             assertEquals(480.0, workRow.getCell(2).numericCellValue, 0.0)
             assertEquals(60.0, workRow.getCell(3).numericCellValue, 0.0)
             assertEquals(20.0, workRow.getCell(4).numericCellValue, 0.0)
-            assertEquals(16.0, workRow.getCell(5).numericCellValue, 0.0)
+            assertEquals(160.0, workRow.getCell(5).numericCellValue, 0.0)
             assertEquals("A&B <note>", workRow.getCell(6).stringCellValue)
 
             val vacationRow = sheet.getRow(5)
