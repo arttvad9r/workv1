@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shift_timer_start">Начать смену</string>
+    <string name="shift_timer_stop">Завершить смену</string>
+    <string name="shift_timer_reset">Сбросить таймер</string>
+    <string name="shift_timer_started">Смена начата в %1$s</string>
+    <string name="shift_timer_elapsed">Прошло: %1$s</string>
+    <string name="shift_timer_other_date">Смена уже идёт за %1$s. Откройте эту дату, чтобы завершить её.</string>
+    <string name="shift_timer_hint">Время считается по часам устройства и продолжит учитываться после закрытия приложения.</string>
+    <string name="shift_timer_error">Не удалось применить таймер. Сбросьте его или укажите время вручную.</string>
+</resources>
