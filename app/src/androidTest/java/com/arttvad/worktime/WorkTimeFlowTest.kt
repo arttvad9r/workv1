@@ -166,6 +166,27 @@ class WorkTimeFlowTest {
     }
 
     @Test
+    fun workDurationPresetSavesTwelveHourDay() = runEmptyComposeUiTest {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onNodeWithTag(dayTag).performClick()
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag("day-editor-preset-12").assertExists()
+                    true
+                }.getOrDefault(false)
+            }
+
+            onNodeWithTag("day-editor-preset-12").performClick()
+            onNodeWithTag("day-editor-worked-hours").assertTextContains("12")
+            onNodeWithTag("day-editor-save").performClick()
+
+            waitUntil(timeoutMillis = 5_000) {
+                currentEntry()?.workedMinutes == 12 * 60
+            }
+        }
+    }
+
+    @Test
     fun saveEditDeleteUndoAndRelaunch() = runEmptyComposeUiTest {
         val undoLabel = InstrumentationRegistry.getInstrumentation()
             .targetContext

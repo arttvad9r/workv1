@@ -3,6 +3,7 @@ package com.arttvad.worktime.ui.calendar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -182,6 +184,16 @@ fun DayEditorContent(
             onMinutesChanged = { workedMinutes = it.onlyDigits(maxLength = 2) },
         )
 
+        WorkDurationPresets(
+            workedHours = workedHours,
+            workedMinutes = workedMinutes,
+            onPresetSelected = { hours ->
+                workedHours = hours.toString()
+                workedMinutes = ""
+                focusManager.clearFocus()
+            },
+        )
+
         DurationFields(
             title = stringResource(R.string.overtime),
             tagPrefix = "overtime",
@@ -298,6 +310,30 @@ fun DayEditorContent(
         }
 
         Spacer(modifier = Modifier.padding(bottom = 8.dp))
+    }
+}
+
+@Composable
+private fun WorkDurationPresets(
+    workedHours: String,
+    workedMinutes: String,
+    onPresetSelected: (Int) -> Unit,
+) {
+    val hoursSuffix = stringResource(R.string.hours_short)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(8, 10, 12).forEach { hours ->
+            FilterChip(
+                selected = workedHours == hours.toString() &&
+                    (workedMinutes.isBlank() || workedMinutes == "0"),
+                onClick = { onPresetSelected(hours) },
+                label = { Text("$hours $hoursSuffix") },
+                modifier = Modifier.testTag("day-editor-preset-$hours"),
+            )
+        }
     }
 }
 
