@@ -6,14 +6,18 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arttvad.worktime.R
+import com.arttvad.worktime.widget.WorkTimeWidget
 
 @Composable
 fun WorkTimeRoot(viewModel: CalendarViewModel) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     val dataError = stringResource(R.string.data_error)
     val saveError = stringResource(R.string.save_error)
@@ -26,6 +30,10 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
     val patternApplyError = stringResource(R.string.pattern_apply_error)
     val patternUndoError = stringResource(R.string.pattern_undo_error)
     val undo = stringResource(R.string.undo)
+
+    LaunchedEffect(uiState.detailedYearStatistics, uiState.preferences) {
+        runCatching { WorkTimeWidget().updateAll(context) }
+    }
 
     LaunchedEffect(viewModel, snackbarHostState) {
         viewModel.events.collect { event ->
