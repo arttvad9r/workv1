@@ -31,55 +31,56 @@
 
 ### Foundation
 
-- [ ] Gradle/AGP/Kotlin/Compose project bootstrap;
-- [ ] package/application/theme/resources;
-- [ ] edge-to-edge;
-- [ ] CI build/lint/unit tests.
+- [x] Gradle/AGP/Kotlin/Compose project bootstrap;
+- [x] package/application/theme/resources;
+- [x] edge-to-edge;
+- [x] CI build/lint/unit tests.
 
 ### Domain/data
 
-- [ ] `WorkDay` model;
-- [ ] Room database/DAO/entity;
-- [ ] repository;
-- [ ] month grid generator;
-- [ ] month summary calculator;
-- [ ] deterministic money calculator;
-- [ ] validation tests.
+- [x] `WorkDay` model;
+- [x] Room database/DAO/entity;
+- [x] repository;
+- [x] month grid generator;
+- [x] month summary calculator;
+- [x] deterministic money calculator;
+- [x] validation tests.
 
 ### UI
 
-- [ ] month pager;
-- [ ] month header;
-- [ ] compact summary;
-- [ ] calendar grid;
-- [ ] today/entry states;
-- [ ] day edit bottom sheet;
-- [ ] save/update entry;
-- [ ] delete entry;
-- [ ] Russian strings;
-- [ ] system light/dark support.
+- [x] month pager;
+- [x] month header;
+- [x] compact summary;
+- [x] calendar grid;
+- [x] today/entry states;
+- [x] explicit shortcut back to current month;
+- [x] day edit bottom sheet;
+- [x] save/update entry;
+- [x] delete entry with Snackbar Undo;
+- [x] Russian strings;
+- [x] system light/dark support.
 
 ### Reliability
 
-- [ ] relaunch keeps data;
-- [ ] configuration recreation keeps visible month/editor state where appropriate;
-- [ ] invalid overtime cannot be saved;
-- [ ] persistence failure has user-safe error path.
+- [ ] relaunch keeps data — requires device/emulator verification;
+- [ ] configuration recreation keeps visible month/editor state where appropriate — requires device/emulator verification;
+- [x] invalid overtime cannot be saved;
+- [x] persistence failure has user-safe error path.
 
 ## Phase 2 — Settings + polished core
 
 - [ ] settings destination;
-- [ ] default hourly rate;
-- [ ] currency;
-- [ ] actual earnings in summary;
+- [x] default hourly rate;
+- [x] currency;
+- [x] actual earnings in summary;
 - [ ] optional day rate override;
 - [ ] Navigation 3 integration when justified by destinations;
 - [ ] predictive Back verification;
 - [ ] large-font polish;
 - [ ] TalkBack pass;
-- [ ] expanded two-pane layout;
+- [x] expanded two-pane layout;
 - [ ] screenshot tests;
-- [ ] UI tests for save/edit/delete.
+- [ ] UI tests for save/edit/delete;
 
 ## Phase 3 — Work patterns
 
@@ -130,6 +131,18 @@ Not started unless product need is proven.
 - [ ] encryption/auth/privacy review;
 - [ ] deletion/export requirements;
 - [ ] Data Safety update.
+
+## Verified build status
+
+Последняя полностью проверенная кодовая ревизия перед обновлением этого roadmap: `ab6209838ef950a67ec18f76395525941aab4c59`.
+
+GitHub Actions успешно выполняет:
+
+- `testDebugUnitTest`;
+- `lintDebug`;
+- `assembleDebug`.
+
+Это подтверждает компиляцию Android-кода, прохождение unit tests, отсутствие blocking lint errors и сборку debug APK. Device/emulator flows отмечаются выполненными только после отдельной instrumentation-проверки.
 
 ## Explicitly deferred
 
