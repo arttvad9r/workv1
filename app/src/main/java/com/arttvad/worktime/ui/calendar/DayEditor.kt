@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.calculation.MoneyFormatter
+import com.arttvad.worktime.domain.calculation.ShiftDurationCalculator
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
@@ -124,6 +126,10 @@ fun DayEditorContent(
             }.getOrDefault(""),
         )
     }
+    var shiftCalculatorExpanded by rememberSaveable(date.toString()) { mutableStateOf(false) }
+    var shiftStart by rememberSaveable(date.toString()) { mutableStateOf("") }
+    var shiftEnd by rememberSaveable(date.toString()) { mutableStateOf("") }
+    var shiftBreak by rememberSaveable(date.toString()) { mutableStateOf("") }
 
     val workedTotal = parseDuration(workedHours, workedMinutes)
     val overtimeTotal = parseDuration(overtimeHours, overtimeMinutes, allowZero = true)
@@ -212,12 +218,37 @@ fun DayEditorContent(
             WorkDurationPresets(
                 workedHours = workedHours,
                 workedMinutes = workedMinutes,
+                shiftCalculatorExpanded = shiftCalculatorExpanded,
                 onPresetSelected = { hours ->
                     workedHours = hours.toString()
                     workedMinutes = ""
+                    shiftCalculatorExpanded = false
+                    focusManager.clearFocus()
+                },
+                onShiftCalculatorToggle = {
+                    shiftCalculatorExpanded = !shiftCalculatorExpanded
                     focusManager.clearFocus()
                 },
             )
+
+            if (shiftCalculatorExpanded) {
+                ShiftTimeCalculator(
+                    start = shiftStart,
+                    end = shiftEnd,
+                    breakInput = shiftBreak,
+                    onStartChanged = { shiftStart = it.clockInput() },
+                    onEndChanged = { shiftEnd = it.clockInput() },
+                    onBreakChanged = { shiftBreak = it.onlyDigits(maxLength = 4) },
+                    onApply = { calculatedMinutes ->
+                        workedHours = (calculatedMinutes / 60).toString()
+                        workedMinutes = (calculatedMinutes % 60)
+                            .takeIf { it != 0 }
+                            ?.toString()
+                            .orEmpty()
+                        focusManager.clearFocus()
+                    },
+                )
+            }
 
             DurationFields(
                 title = stringResource(R.string.overtime),
@@ -395,7 +426,9 @@ private fun dayTypeSelectorLabel(type: WorkDayType): String = stringResource(
 private fun WorkDurationPresets(
     workedHours: String,
     workedMinutes: String,
+    shiftCalculatorExpanded: Boolean,
     onPresetSelected: (Int) -> Unit,
+    onShiftCalculatorToggle: () -> Unit,
 ) {
     val hoursSuffix = stringResource(R.string.hours_short)
     FlowRow(
@@ -406,11 +439,115 @@ private fun WorkDurationPresets(
         listOf(8, 10, 12).forEach { hours ->
             FilterChip(
                 selected = workedHours == hours.toString() &&
-                    (workedMinutes.isBlank() || workedMinutes == "0"),
+                    (workedMinutes.isBlank() || workedMinutes == "0") &&
+                    !shiftCalculatorExpanded,
                 onClick = { onPresetSelected(hours) },
                 label = { Text("$hours $hoursSuffix") },
                 modifier = Modifier.testTag("day-editor-preset-$hours"),
             )
+        }
+        FilterChip(
+            selected = shiftCalculatorExpanded,
+            onClick = onShiftCalculatorToggle,
+            label = { Text(stringResource(R.string.calculate_by_time)) },
+            modifier = Modifier.testTag("day-editor-time-calculator"),
+        )
+    }
+}
+
+@Composable
+private fun ShiftTimeCalculator(
+    start: String,
+    end: String,
+    breakInput: String,
+    onStartChanged: (String) -> Unit,
+    onEndChanged: (String) -> Unit,
+    onBreakChanged: (String) -> Unit,
+    onApply: (Int) -> Unit,
+) {
+    val breakMinutes = if (breakInput.isBlank()) 0 else breakInput.toIntOrNull()
+    val calculatedMinutes = breakMinutes?.let {
+        ShiftDurationCalculator.calculate(start = start, end = end, breakMinutes = it)
+    }
+    val hasEnoughInput = start.isNotBlank() && end.isNotBlank()
+    val invalid = hasEnoughInput && calculatedMinutes == null
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        OutlinedTextField(
+            value = start,
+            onValueChange = onStartChanged,
+            label = { Text(stringResource(R.string.shift_start)) },
+            placeholder = { Text(stringResource(R.string.shift_time_hint)) },
+            singleLine = true,
+            isError = invalid,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Ascii,
+                imeAction = ImeAction.Next,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("day-editor-shift-start"),
+        )
+        OutlinedTextField(
+            value = end,
+            onValueChange = onEndChanged,
+            label = { Text(stringResource(R.string.shift_end)) },
+            placeholder = { Text(stringResource(R.string.shift_time_hint)) },
+            singleLine = true,
+            isError = invalid,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Ascii,
+                imeAction = ImeAction.Next,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("day-editor-shift-end"),
+        )
+        OutlinedTextField(
+            value = breakInput,
+            onValueChange = onBreakChanged,
+            label = { Text(stringResource(R.string.shift_break)) },
+            placeholder = { Text(stringResource(R.string.shift_break_hint)) },
+            suffix = { Text(stringResource(R.string.minutes_short)) },
+            singleLine = true,
+            isError = invalid,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("day-editor-shift-break"),
+        )
+
+        if (invalid) {
+            Text(
+                text = stringResource(R.string.invalid_shift_time),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        } else if (calculatedMinutes != null) {
+            Text(
+                text = stringResource(
+                    R.string.shift_total,
+                    formatDurationShort(calculatedMinutes),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        OutlinedButton(
+            onClick = { calculatedMinutes?.let(onApply) },
+            enabled = calculatedMinutes != null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("day-editor-shift-apply"),
+        ) {
+            Text(stringResource(R.string.apply_shift_duration))
         }
     }
 }
@@ -489,3 +626,10 @@ private fun parseDuration(
 }
 
 private fun String.onlyDigits(maxLength: Int): String = filter(Char::isDigit).take(maxLength)
+
+private fun String.clockInput(): String {
+    val filtered = filter { it.isDigit() || it == ':' }
+    if (':' in filtered) return filtered.take(5)
+    val digits = filtered.filter(Char::isDigit).take(4)
+    return if (digits.length <= 2) digits else "${digits.take(2)}:${digits.drop(2)}"
+}
