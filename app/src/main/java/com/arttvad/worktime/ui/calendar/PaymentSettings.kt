@@ -28,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -113,7 +114,9 @@ fun PaymentSettingsSheet(
                     keyboardType = KeyboardType.Decimal,
                     imeAction = ImeAction.Next,
                 ),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings-hourly-rate"),
             )
 
             OutlinedTextField(
@@ -135,7 +138,9 @@ fun PaymentSettingsSheet(
                     imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings-currency"),
             )
 
             if (rateInput.isNotBlank()) {
@@ -160,7 +165,9 @@ fun PaymentSettingsSheet(
                         onSave(parsedRate, normalizedCurrency)
                     },
                     enabled = canSave,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("settings-save"),
                 ) {
                     Text(stringResource(R.string.save))
                 }
