@@ -135,6 +135,12 @@ class WorkTimeFlowTest {
 
             ActivityScenario.launch(MainActivity::class.java).use {
                 onNodeWithTag(dayTag).performClick()
+                waitUntil(timeoutMillis = 5_000) {
+                    runCatching {
+                        onNodeWithTag("day-editor-worked-hours").assertExists()
+                        true
+                    }.getOrDefault(false)
+                }
                 onNodeWithTag("day-editor-worked-hours").performTextInput("8")
                 onNodeWithTag("day-editor-add-rate-override").performClick()
                 onNodeWithTag("day-editor-rate-override").performTextInput("20")
@@ -194,6 +200,12 @@ class WorkTimeFlowTest {
 
         ActivityScenario.launch(MainActivity::class.java).use {
             onNodeWithTag(dayTag).performClick()
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag("day-editor-worked-hours").assertExists()
+                    true
+                }.getOrDefault(false)
+            }
             onNodeWithTag("day-editor-worked-hours").performTextInput("8")
             onNodeWithTag("day-editor-worked-minutes").performTextInput("30")
             onNodeWithTag("day-editor-save").performClick()
@@ -283,6 +295,12 @@ class WorkTimeFlowTest {
             }
 
             onNodeWithTag(dayTag).performClick()
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag("day-editor-worked-hours").assertExists()
+                    true
+                }.getOrDefault(false)
+            }
             onNodeWithTag("day-editor-worked-hours").performTextInput("7")
             onNodeWithTag("day-editor-worked-minutes").performTextInput("45")
             onNodeWithTag("day-editor-add-note").performClick()
