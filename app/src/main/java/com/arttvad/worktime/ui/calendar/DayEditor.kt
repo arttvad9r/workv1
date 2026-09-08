@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -135,6 +136,7 @@ fun DayEditorContent(
 
         DurationFields(
             title = stringResource(R.string.worked),
+            tagPrefix = "worked",
             hours = workedHours,
             minutes = workedMinutes,
             onHoursChanged = { workedHours = it.onlyDigits(maxLength = 2) },
@@ -143,6 +145,7 @@ fun DayEditorContent(
 
         DurationFields(
             title = stringResource(R.string.overtime),
+            tagPrefix = "overtime",
             hours = overtimeHours,
             minutes = overtimeMinutes,
             onHoursChanged = { overtimeHours = it.onlyDigits(maxLength = 2) },
@@ -162,14 +165,19 @@ fun DayEditorContent(
                 value = note,
                 onValueChange = { note = it.take(500) },
                 label = { Text(stringResource(R.string.note)) },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("day-editor-note"),
                 minLines = 2,
                 maxLines = 4,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             )
         } else {
-            TextButton(onClick = { noteExpanded = true }) {
+            TextButton(
+                onClick = { noteExpanded = true },
+                modifier = Modifier.testTag("day-editor-add-note"),
+            ) {
                 Text(stringResource(R.string.add_note))
             }
         }
@@ -182,7 +190,9 @@ fun DayEditorContent(
                 onSave(date, work, overtime, note)
             },
             enabled = canSave,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("day-editor-save"),
         ) {
             Text(stringResource(R.string.save))
         }
@@ -193,7 +203,9 @@ fun DayEditorContent(
                     focusManager.clearFocus()
                     onDelete(date)
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("day-editor-delete"),
             ) {
                 Text(
                     text = stringResource(R.string.delete),
@@ -209,6 +221,7 @@ fun DayEditorContent(
 @Composable
 private fun DurationFields(
     title: String,
+    tagPrefix: String,
     hours: String,
     minutes: String,
     onHoursChanged: (String) -> Unit,
@@ -238,7 +251,9 @@ private fun DurationFields(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Next) },
                 ),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("day-editor-$tagPrefix-hours"),
             )
             OutlinedTextField(
                 value = minutes,
@@ -253,7 +268,9 @@ private fun DurationFields(
                 keyboardActions = KeyboardActions(
                     onNext = { focusManager.moveFocus(FocusDirection.Next) },
                 ),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .testTag("day-editor-$tagPrefix-minutes"),
             )
         }
     }
