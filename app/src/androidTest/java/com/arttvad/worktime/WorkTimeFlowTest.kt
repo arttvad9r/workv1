@@ -1,6 +1,6 @@
 package com.arttvad.worktime
 
-import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -23,6 +23,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class WorkTimeFlowTest {
     private val today: LocalDate = LocalDate.now()
