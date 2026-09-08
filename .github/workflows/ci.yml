@@ -35,8 +35,8 @@ jobs:
         with:
           gradle-version: '9.6.1'
 
-      - name: Unit tests, lint and debug build
-        run: gradle testDebugUnitTest lintDebug assembleDebug --stacktrace
+      - name: Unit tests, lint and debug builds
+        run: gradle testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
 
   instrumentation:
     runs-on: ubuntu-latest
