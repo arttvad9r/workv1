@@ -6,15 +6,18 @@
 
 ## Статус
 
-Проект находится в активной разработке. Первая цель — рабочий offline-first вертикальный срез:
+Проект находится в активной разработке. Рабочий offline-first вертикальный срез уже включает:
 
-- календарь месяца;
-- быстрый ввод часов по дню;
-- переработка и заметка;
-- локальное сохранение;
-- месячная сводка по часам и заработку;
-- современный adaptive Compose UI;
-- базовые unit/UI проверки и CI.
+- календарь месяца и быстрый ввод часов по дню;
+- переработку и заметки;
+- локальное хранение в Room без обязательного аккаунта;
+- базовую почасовую ставку, валюту и необязательную ставку для отдельного дня;
+- месячную сводку по часам, переработке и заработку;
+- сохранение настроек через DataStore;
+- adaptive Compose UI, edge-to-edge, light/dark theme;
+- accessibility checks и проверки font scale 200%;
+- unit/instrumentation CI на Android API 36;
+- устанавливаемый debug APK как artifact каждого успешного CI build.
 
 ## Документация
 
@@ -34,6 +37,28 @@
 6. **Никакой обязательной аналитики, рекламы или сетевого слоя в MVP.**
 7. **Адаптивность, edge-to-edge и accessibility закладываются сразу, а не после релиза.**
 
+## Сборка и установка
+
+Проект использует repository Gradle Wrapper 9.6.1:
+
+```bash
+./gradlew testDebugUnitTest lintDebug assembleDebug
+```
+
+Debug APK после локальной сборки:
+
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+Установка через ADB:
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+В GitHub Actions каждый успешный `Android CI` build также публикует artifact `worktime-debug-<commit-sha>` с готовым `app-debug.apk`.
+
 ## Android target
 
-Проект ориентируется на актуальный Android-стек 2026 года: Kotlin, Jetpack Compose, Material 3/design system, UDF, Room, DataStore при необходимости, `targetSdk 36`, тестирование совместимости с API 37.
+Проект ориентируется на актуальный Android-стек 2026 года: Kotlin, Jetpack Compose, Material 3/design system, UDF, Room и DataStore. Текущий baseline: `compileSdk 37`, `targetSdk 36`, `minSdk 26`, JDK 17, AGP 9.4 и Gradle 9.6.1. Runtime instrumentation выполняется на Android API 36 x86_64 emulator.

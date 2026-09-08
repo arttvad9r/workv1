@@ -67,7 +67,8 @@
 - [x] relaunch keeps data — verified on API 36 emulator with real Room/AppContainer;
 - [x] configuration recreation keeps visible month/editor draft — verified on API 36 emulator;
 - [x] invalid overtime cannot be saved;
-- [x] persistence failure has user-safe error path.
+- [x] persistence failure has user-safe error path;
+- [x] Room schema migration `1 -> 2` preserves existing work-day rows and adds nullable day-rate override.
 
 ## Phase 2 — Settings + polished core
 
@@ -76,15 +77,15 @@
 - [x] currency;
 - [x] settings persistence across Activity relaunch verified against real DataStore;
 - [x] actual earnings in summary;
-- [ ] optional day rate override;
-- [ ] Navigation 3 integration when justified by destinations;
-- [ ] predictive Back verification;
-- [ ] large-font polish — calendar/summary have automated 200% font-scale coverage, editor/settings still need coverage;
+- [x] optional day rate override with persistence and deterministic mixed-rate month calculation;
+- [x] Navigation 3 applicability reviewed — deliberately not introduced while the app has one root destination plus modal surfaces; revisit when a real destination stack exists;
+- [ ] manual predictive Back gesture verification — current Material 3 sheets use platform behavior and the root Activity does not intercept Back;
+- [x] large-font polish — calendar, editor and payment settings have automated 200% font-scale coverage; primary actions remain reachable;
 - [x] automated Compose accessibility checks for calendar, day editor and payment settings on API 36;
 - [ ] manual TalkBack pass;
 - [x] expanded two-pane layout;
-- [ ] screenshot tests;
-- [x] UI tests for save/edit/delete/undo/relaunch/recreation/settings persistence.
+- [ ] screenshot tests — deferred while official Compose Preview Screenshot Testing remains experimental and its current alpha tooling has an active renderer regression;
+- [x] UI tests for save/edit/delete/undo/relaunch/recreation/settings persistence/day-rate persistence;
 
 ## Phase 3 — Work patterns
 
@@ -138,7 +139,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью проверенная runtime-ревизия перед CI hardening: `baf177c5d95d4e0f8c41e7b40c86b5a35d96799b`.
+Последняя полностью runtime-проверенная продуктовая ревизия: `000cb868d88c7b4bdbb0f66c5124efa682fd7110`.
 
 GitHub Actions успешно выполняет через repository Gradle Wrapper:
 
@@ -148,9 +149,11 @@ GitHub Actions успешно выполняет через repository Gradle Wr
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальную `MainActivity`, `AppContainer`, Room и DataStore. Проверены сохранение, редактирование, удаление с Undo, повторный запуск Activity, configuration recreation, accessibility основных поверхностей и сохранение payment settings после relaunch. Отдельный configuration test проверяет календарь при font scale 200%.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Проверены сохранение, редактирование, удаление с Undo, повторный запуск Activity, configuration recreation, day-rate override, Room migration `1 -> 2`, accessibility основных поверхностей и доступность primary actions при font scale 200%.
 
-Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закрепляются immutable commit SHA. Успешный build публикует debug APK как CI artifact с ограниченным retention.
+Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закрепляются immutable commit SHA. `android-actions/setup-android` переведён на Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно. Успешный build публикует debug APK как CI artifact с ограниченным retention.
+
+Официальный Compose Preview Screenshot Testing остаётся experimental; visual golden tests не включаются в стабильный gate, пока tooling не станет достаточно предсказуемым для проекта.
 
 ## Explicitly deferred
 
