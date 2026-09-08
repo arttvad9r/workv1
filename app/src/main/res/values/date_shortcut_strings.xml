@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="date_shortcut_title">Выберите дату</string>
+    <string name="date_shortcut_confirm">Перейти</string>
+    <string name="date_shortcut_description">Выбрать дату. Сейчас %1$s</string>
+</resources>
