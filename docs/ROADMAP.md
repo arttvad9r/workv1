@@ -32,6 +32,7 @@
 ### Foundation
 
 - [x] Gradle/AGP/Kotlin/Compose project bootstrap;
+- [x] Gradle Wrapper 9.6.1 с проверкой официальных SHA-256;
 - [x] package/application/theme/resources;
 - [x] edge-to-edge;
 - [x] CI build/lint/unit tests.
@@ -62,8 +63,8 @@
 
 ### Reliability
 
-- [ ] relaunch keeps data — requires device/emulator verification;
-- [ ] configuration recreation keeps visible month/editor state where appropriate — requires device/emulator verification;
+- [x] relaunch keeps data — verified on API 36 emulator with real Room/AppContainer;
+- [x] configuration recreation keeps visible month/editor draft — verified on API 36 emulator;
 - [x] invalid overtime cannot be saved;
 - [x] persistence failure has user-safe error path.
 
@@ -80,7 +81,7 @@
 - [ ] TalkBack pass;
 - [x] expanded two-pane layout;
 - [ ] screenshot tests;
-- [ ] UI tests for save/edit/delete;
+- [x] UI tests for save/edit/delete/relaunch/recreation.
 
 ## Phase 3 — Work patterns
 
@@ -134,15 +135,19 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью проверенная кодовая ревизия перед обновлением этого roadmap: `ab6209838ef950a67ec18f76395525941aab4c59`.
+Последняя полностью проверенная runtime-ревизия: `e39eaba874688e58fb5ebeed2e0cbb563e6fdddd`.
 
 GitHub Actions успешно выполняет:
 
 - `testDebugUnitTest`;
 - `lintDebug`;
-- `assembleDebug`.
+- `assembleDebug`;
+- `assembleDebugAndroidTest`;
+- `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Это подтверждает компиляцию Android-кода, прохождение unit tests, отсутствие blocking lint errors и сборку debug APK. Device/emulator flows отмечаются выполненными только после отдельной instrumentation-проверки.
+Instrumentation-проверка использует реальную `MainActivity`, `AppContainer`, Room и DataStore. Проверены сохранение, редактирование, удаление с Undo, повторный запуск Activity и configuration recreation с сохранением релевантного UI-state.
+
+Gradle Wrapper 9.6.1 сгенерирован самим Gradle; SHA-256 binary distribution и wrapper JAR проверены по официальному Gradle checksum reference. Следующий CI gate обязан работать через `./gradlew`, чтобы локальная и CI-сборки использовали одну версию Gradle.
 
 ## Explicitly deferred
 

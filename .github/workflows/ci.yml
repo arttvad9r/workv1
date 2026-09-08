@@ -34,13 +34,11 @@ jobs:
       - name: Install stable Android SDK baseline
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle 9.6.1
+      - name: Set up Gradle caching
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.6.1'
 
       - name: Unit tests, lint and debug builds
-        run: gradle testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
 
   instrumentation:
     runs-on: ubuntu-latest
@@ -62,10 +60,8 @@ jobs:
       - name: Install stable Android SDK baseline
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Set up Gradle 9.6.1
+      - name: Set up Gradle caching
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.6.1'
 
       - name: Enable KVM
         run: |
@@ -81,4 +77,4 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: gradle connectedDebugAndroidTest --stacktrace
+          script: ./gradlew connectedDebugAndroidTest --stacktrace
