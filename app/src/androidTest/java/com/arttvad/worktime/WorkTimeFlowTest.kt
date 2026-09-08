@@ -1,13 +1,16 @@
 package com.arttvad.worktime
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.accessibility.enableAccessibilityChecks
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.compose.ui.test.v2.runEmptyComposeUiTest
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -45,6 +48,30 @@ class WorkTimeFlowTest {
     @After
     fun cleanupTestDay() {
         runBlocking { repository.delete(today) }
+    }
+
+    @Test
+    fun mainCalendarAndDayEditorPassAccessibilityChecks() = runEmptyComposeUiTest {
+        enableAccessibilityChecks()
+
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag(dayTag).assertExists()
+                    true
+                }.getOrDefault(false)
+            }
+            onRoot().tryPerformAccessibilityChecks()
+
+            onNodeWithTag(dayTag).performClick()
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag("day-editor-worked-hours").assertExists()
+                    true
+                }.getOrDefault(false)
+            }
+            onRoot().tryPerformAccessibilityChecks()
+        }
     }
 
     @Test
