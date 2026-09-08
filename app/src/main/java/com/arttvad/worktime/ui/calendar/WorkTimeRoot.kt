@@ -4,6 +4,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -101,18 +102,27 @@ fun WorkTimeRoot(
         }
     }
 
-    WorkTimeScreen(
-        uiState = uiState,
-        snackbarHostState = snackbarHostState,
-        onVisibleMonthChanged = viewModel::setVisibleMonth,
-        onDaySelected = viewModel::selectDay,
-        onDismissDayEditor = viewModel::dismissDayEditor,
-        onSaveDay = viewModel::saveDay,
-        onDeleteDay = viewModel::deleteDay,
-        onUpdatePayment = viewModel::updatePayment,
-        onUpdateReminder = viewModel::updateReminder,
-        onApplyPattern = viewModel::applyPattern,
-        onWriteBackup = viewModel::writeBackup,
-        onRestoreBackup = viewModel::restoreBackup,
-    )
+    CompositionLocalProvider(
+        LocalShiftTimerEnvironment provides ShiftTimerEnvironment(
+            activeShift = uiState.preferences.activeShift,
+            onStartShift = viewModel::startShift,
+            onStopShift = viewModel::stopShift,
+            onResetShift = viewModel::resetShift,
+        ),
+    ) {
+        WorkTimeScreen(
+            uiState = uiState,
+            snackbarHostState = snackbarHostState,
+            onVisibleMonthChanged = viewModel::setVisibleMonth,
+            onDaySelected = viewModel::selectDay,
+            onDismissDayEditor = viewModel::dismissDayEditor,
+            onSaveDay = viewModel::saveDay,
+            onDeleteDay = viewModel::deleteDay,
+            onUpdatePayment = viewModel::updatePayment,
+            onUpdateReminder = viewModel::updateReminder,
+            onApplyPattern = viewModel::applyPattern,
+            onWriteBackup = viewModel::writeBackup,
+            onRestoreBackup = viewModel::restoreBackup,
+        )
+    }
 }
