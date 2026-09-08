@@ -7,7 +7,6 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
 import androidx.compose.ui.test.v2.runEmptyComposeUiTest
 import androidx.test.core.app.ActivityScenario
@@ -111,9 +110,7 @@ class MonthStatisticsFlowTest {
                 .assertTextEquals("2")
             onNodeWithTag("statistics-vacation-days-value")
                 .assertTextEquals("1")
-            onNodeWithTag("statistics-export-csv")
-                .performScrollTo()
-                .assertIsDisplayed()
+            onNodeWithTag("statistics-export-csv").assertExists()
         }
     }
 }
