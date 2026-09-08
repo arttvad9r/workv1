@@ -67,6 +67,7 @@ class MonthStatisticsConfigurationTest {
                         ),
                         onDismiss = {},
                         onExportCsv = {},
+                        onExportXlsx = {},
                         onExportPdf = {},
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -76,6 +77,12 @@ class MonthStatisticsConfigurationTest {
 
         composeRule
             .onNodeWithTag("statistics-export-csv")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
+
+        composeRule
+            .onNodeWithTag("statistics-export-xlsx")
             .performScrollTo()
             .assertIsDisplayed()
             .assertIsEnabled()

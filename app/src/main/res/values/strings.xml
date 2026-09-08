@@ -86,6 +86,9 @@
     <string name="export_csv">Экспорт CSV</string>
     <string name="export_success">CSV сохранён</string>
     <string name="export_error">Не удалось сохранить CSV</string>
+    <string name="export_xlsx">Экспорт XLSX</string>
+    <string name="export_xlsx_success">XLSX сохранён</string>
+    <string name="export_xlsx_error">Не удалось сохранить XLSX</string>
     <string name="export_pdf">Экспорт PDF</string>
     <string name="export_pdf_success">PDF сохранён</string>
     <string name="export_pdf_error">Не удалось сохранить PDF</string>

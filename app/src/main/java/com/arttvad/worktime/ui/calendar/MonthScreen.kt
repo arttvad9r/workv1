@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.exporting.MonthCsvExporter
 import com.arttvad.worktime.domain.exporting.MonthReportDataBuilder
+import com.arttvad.worktime.domain.exporting.MonthXlsxExporter
 import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import com.arttvad.worktime.exporting.MonthPdfExporter
@@ -77,6 +78,7 @@ fun WorkTimeScreen(
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
     var statisticsOpen by rememberSaveable { mutableStateOf(false) }
     var pendingCsv by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingXlsx by rememberSaveable { mutableStateOf<ByteArray?>(null) }
     var pendingPdf by rememberSaveable { mutableStateOf<ByteArray?>(null) }
     val initialPage = remember { pageForMonth(uiState.visibleMonth) }
     val pagerState = rememberPagerState(
@@ -87,6 +89,8 @@ fun WorkTimeScreen(
     val scope = rememberCoroutineScope()
     val csvExportSuccess = stringResource(R.string.export_success)
     val csvExportError = stringResource(R.string.export_error)
+    val xlsxExportSuccess = stringResource(R.string.export_xlsx_success)
+    val xlsxExportError = stringResource(R.string.export_xlsx_error)
     val pdfExportSuccess = stringResource(R.string.export_pdf_success)
     val pdfExportError = stringResource(R.string.export_pdf_error)
     val csvDocumentLauncher = rememberLauncherForActivityResult(
@@ -106,6 +110,28 @@ fun WorkTimeScreen(
                 }
                 snackbarHostState.showSnackbar(
                     message = if (result.isSuccess) csvExportSuccess else csvExportError,
+                )
+            }
+        }
+    }
+    val xlsxDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ),
+    ) { uri ->
+        val content = pendingXlsx
+        pendingXlsx = null
+        if (uri != null && content != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)
+                            ?.use { output -> output.write(content) }
+                            ?: error("Document provider returned no output stream")
+                    }
+                }
+                snackbarHostState.showSnackbar(
+                    message = if (result.isSuccess) xlsxExportSuccess else xlsxExportError,
                 )
             }
         }
@@ -231,6 +257,37 @@ fun WorkTimeScreen(
                     currencyCode = uiState.preferences.currencyCode,
                 )
                 csvDocumentLauncher.launch("worktime-${uiState.visibleMonth}.csv")
+            },
+            onExportXlsx = {
+                val month = uiState.visibleMonth
+                val days = uiState.entries.values.toList()
+                val hourlyRateMinor = uiState.preferences.hourlyRateMinor
+                val currencyCode = uiState.preferences.currencyCode
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val report = MonthReportDataBuilder.build(
+                                month = month,
+                                days = days,
+                                hourlyRateMinor = hourlyRateMinor,
+                                currencyCode = currencyCode,
+                            )
+                            ByteArrayOutputStream().use { output ->
+                                MonthXlsxExporter.write(output, report)
+                                output.toByteArray()
+                            }
+                        }
+                    }
+                    result.fold(
+                        onSuccess = { bytes ->
+                            pendingXlsx = bytes
+                            xlsxDocumentLauncher.launch("worktime-$month.xlsx")
+                        },
+                        onFailure = {
+                            snackbarHostState.showSnackbar(xlsxExportError)
+                        },
+                    )
+                }
             },
             onExportPdf = {
                 val month = uiState.visibleMonth
