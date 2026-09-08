@@ -87,6 +87,12 @@ class WorkTimeFlowTest {
             onNodeWithTag("day-editor-delete").performClick()
 
             waitUntil(timeoutMillis = 5_000) { currentEntry() == null }
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithText(undoLabel).assertExists()
+                    true
+                }.getOrDefault(false)
+            }
             onNodeWithText(undoLabel).performClick()
             waitUntil(timeoutMillis = 5_000) {
                 currentEntry()?.workedMinutes == 9 * 60
