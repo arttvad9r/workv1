@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -83,8 +82,9 @@ fun DayEditorContent(
     var note by rememberSaveable(date.toString(), entry?.updatedAtEpochMillis) {
         mutableStateOf(entry?.note.orEmpty())
     }
-    var noteExpanded by rememberSaveable(date.toString()) { mutableStateOf(entry?.note?.isNotBlank() == true) }
-    var confirmDelete by rememberSaveable(date.toString()) { mutableStateOf(false) }
+    var noteExpanded by rememberSaveable(date.toString()) {
+        mutableStateOf(entry?.note?.isNotBlank() == true)
+    }
 
     val workedTotal = parseDuration(workedHours, workedMinutes)
     val overtimeTotal = parseDuration(overtimeHours, overtimeMinutes, allowZero = true)
@@ -189,7 +189,10 @@ fun DayEditorContent(
 
         if (entry != null) {
             TextButton(
-                onClick = { confirmDelete = true },
+                onClick = {
+                    focusManager.clearFocus()
+                    onDelete(date)
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
@@ -200,32 +203,6 @@ fun DayEditorContent(
         }
 
         Spacer(modifier = Modifier.padding(bottom = 8.dp))
-    }
-
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            title = { Text(stringResource(R.string.confirm_delete_title)) },
-            text = { Text(stringResource(R.string.confirm_delete_message)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        confirmDelete = false
-                        onDelete(date)
-                    },
-                ) {
-                    Text(
-                        text = stringResource(R.string.delete),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
     }
 }
 
