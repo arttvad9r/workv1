@@ -27,19 +27,17 @@ class QuickAddShortcutFlowTest {
                     shortcut.id == MainActivity.QUICK_ADD_SHORTCUT_ID
                 }
             }
+        }
 
-            val shortcut = shortcutManager.dynamicShortcuts.single { item ->
-                item.id == MainActivity.QUICK_ADD_SHORTCUT_ID
-            }
-            val shortcutIntent = requireNotNull(shortcut.intent)
-            assertEquals(MainActivity.ACTION_ADD_TODAY, shortcutIntent.action)
-            assertTrue(shortcutIntent.flags and Intent.FLAG_ACTIVITY_CLEAR_TOP != 0)
-            assertTrue(shortcutIntent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP != 0)
+        val shortcut = shortcutManager.dynamicShortcuts.single { item ->
+            item.id == MainActivity.QUICK_ADD_SHORTCUT_ID
+        }
+        val shortcutIntent = requireNotNull(shortcut.intent)
+        assertEquals(MainActivity.ACTION_ADD_TODAY, shortcutIntent.action)
+        assertTrue(shortcutIntent.flags and Intent.FLAG_ACTIVITY_CLEAR_TOP != 0)
+        assertTrue(shortcutIntent.flags and Intent.FLAG_ACTIVITY_SINGLE_TOP != 0)
 
-            context.startActivity(
-                Intent(shortcutIntent).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-
+        ActivityScenario.launch<MainActivity>(shortcutIntent).use {
             waitUntil(timeoutMillis = 5_000) {
                 runCatching {
                     onNodeWithTag("day-editor-worked-hours").assertExists()
