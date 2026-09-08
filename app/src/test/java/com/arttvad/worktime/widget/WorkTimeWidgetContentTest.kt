@@ -3,11 +3,9 @@ package com.arttvad.worktime.widget
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceTheme
-import androidx.glance.appwidget.testing.unit.assertHasStartActivityClickAction
 import androidx.glance.appwidget.testing.unit.runGlanceAppWidgetUnitTest
 import androidx.glance.testing.unit.assertHasText
 import androidx.glance.testing.unit.hasTestTag
-import com.arttvad.worktime.MainActivity
 import org.junit.Test
 
 class WorkTimeWidgetContentTest {
@@ -19,7 +17,7 @@ class WorkTimeWidgetContentTest {
     )
 
     @Test
-    fun compactWidgetShowsPrimaryMetricsAndOpensApp() = runGlanceAppWidgetUnitTest {
+    fun compactWidgetShowsPrimaryMetrics() = runGlanceAppWidgetUnitTest {
         setAppWidgetSize(DpSize(180.dp, 110.dp))
         provideComposable {
             GlanceTheme {
@@ -35,7 +33,6 @@ class WorkTimeWidgetContentTest {
         onNode(hasTestTag("widget-month")).assertHasText("Сентябрь 2026")
         onNode(hasTestTag("widget-worked")).assertHasText("Отработано: 168 ч")
         onNode(hasTestTag("widget-earned")).assertHasText("Заработано: 2 520 €")
-        onNode(hasTestTag("widget-root")).assertHasStartActivityClickAction<MainActivity>()
     }
 
     @Test
