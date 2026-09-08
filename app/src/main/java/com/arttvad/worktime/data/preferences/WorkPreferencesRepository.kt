@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import java.io.IOException
+import java.time.LocalDate
 import java.util.Currency
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
@@ -20,12 +21,18 @@ private val Context.workTimeDataStore by preferencesDataStore(name = "worktime_p
 const val DEFAULT_REMINDER_HOUR = 20
 const val DEFAULT_REMINDER_MINUTE = 0
 
+data class ActiveShiftSession(
+    val date: LocalDate,
+    val startedAtEpochMillis: Long,
+)
+
 data class WorkPreferences(
     val hourlyRateMinor: Long? = null,
     val currencyCode: String = defaultCurrencyCode(),
     val reminderEnabled: Boolean = false,
     val reminderHour: Int = DEFAULT_REMINDER_HOUR,
     val reminderMinute: Int = DEFAULT_REMINDER_MINUTE,
+    val activeShift: ActiveShiftSession? = null,
 )
 
 class WorkPreferencesRepository(
@@ -37,6 +44,8 @@ class WorkPreferencesRepository(
         val reminderEnabled = booleanPreferencesKey("reminder_enabled")
         val reminderHour = intPreferencesKey("reminder_hour")
         val reminderMinute = intPreferencesKey("reminder_minute")
+        val activeShiftDate = stringPreferencesKey("active_shift_date")
+        val activeShiftStartedAt = longPreferencesKey("active_shift_started_at")
     }
 
     val preferences: Flow<WorkPreferences> = context.workTimeDataStore.data
@@ -50,12 +59,26 @@ class WorkPreferencesRepository(
             val reminderMinute = values[Keys.reminderMinute]
                 ?.takeIf { value -> value in 0..59 }
                 ?: DEFAULT_REMINDER_MINUTE
+            val activeShiftDate = values[Keys.activeShiftDate]
+                ?.let { value -> runCatching { LocalDate.parse(value) }.getOrNull() }
+            val activeShiftStartedAt = values[Keys.activeShiftStartedAt]
+                ?.takeIf { value -> value >= 0L }
+            val activeShift = if (activeShiftDate != null && activeShiftStartedAt != null) {
+                ActiveShiftSession(
+                    date = activeShiftDate,
+                    startedAtEpochMillis = activeShiftStartedAt,
+                )
+            } else {
+                null
+            }
+
             WorkPreferences(
                 hourlyRateMinor = values[Keys.hourlyRateMinor],
                 currencyCode = values[Keys.currencyCode] ?: defaultCurrencyCode(),
                 reminderEnabled = values[Keys.reminderEnabled] ?: false,
                 reminderHour = reminderHour,
                 reminderMinute = reminderMinute,
+                activeShift = activeShift,
             )
         }
 
@@ -77,6 +100,28 @@ class WorkPreferencesRepository(
             values[Keys.reminderEnabled] = enabled
             values[Keys.reminderHour] = hour
             values[Keys.reminderMinute] = minute
+        }
+    }
+
+    suspend fun startShift(date: LocalDate, startedAtEpochMillis: Long = System.currentTimeMillis()) {
+        require(startedAtEpochMillis >= 0L) { "Shift start timestamp must be non-negative" }
+        context.workTimeDataStore.edit { values ->
+            val existingDate = values[Keys.activeShiftDate]
+                ?.let { value -> runCatching { LocalDate.parse(value) }.getOrNull() }
+            val existingStartedAt = values[Keys.activeShiftStartedAt]
+                ?.takeIf { value -> value >= 0L }
+            check(existingDate == null || existingStartedAt == null) {
+                "A shift session is already active"
+            }
+            values[Keys.activeShiftDate] = date.toString()
+            values[Keys.activeShiftStartedAt] = startedAtEpochMillis
+        }
+    }
+
+    suspend fun clearActiveShift() {
+        context.workTimeDataStore.edit { values ->
+            values.remove(Keys.activeShiftDate)
+            values.remove(Keys.activeShiftStartedAt)
         }
     }
 }
