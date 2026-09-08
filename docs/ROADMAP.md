@@ -68,7 +68,7 @@
 - [x] configuration recreation keeps visible month/editor draft — verified on API 36 emulator;
 - [x] invalid overtime cannot be saved;
 - [x] persistence failure has user-safe error path;
-- [x] Room schema migration `1 -> 2` preserves existing work-day rows and adds nullable day-rate override.
+- [x] Room schema migrations `1 -> 2 -> 3` preserve existing rows, add nullable day-rate override and default legacy rows to `WORK`.
 
 ## Phase 2 — Settings + polished core
 
@@ -80,33 +80,35 @@
 - [x] optional day rate override with persistence and deterministic mixed-rate month calculation;
 - [x] Navigation 3 applicability reviewed — deliberately not introduced while the app has one root destination plus modal surfaces; revisit when a real destination stack exists;
 - [ ] manual predictive Back gesture verification — current Material 3 sheets use platform behavior and the root Activity does not intercept Back;
-- [x] large-font polish — calendar, editor and payment settings have automated 200% font-scale coverage; primary actions remain reachable;
-- [x] automated Compose accessibility checks for calendar, day editor and payment settings on API 36;
+- [x] large-font polish — calendar, editor, payment settings, pattern generator and statistics have automated 200% font-scale coverage;
+- [x] automated Compose accessibility checks for critical calendar/editor/settings/statistics surfaces on API 36;
 - [ ] manual TalkBack pass;
 - [x] expanded two-pane layout;
 - [ ] screenshot tests — deferred while official Compose Preview Screenshot Testing remains experimental and its current alpha tooling has an active renderer regression;
-- [x] UI tests for save/edit/delete/undo/relaunch/recreation/settings persistence/day-rate persistence;
+- [x] UI tests for save/edit/delete/undo/relaunch/recreation/settings persistence/day-rate persistence.
 
 ## Phase 3 — Work patterns
 
-- [ ] day types: work/off/vacation/sick;
-- [ ] presets for 8/10/12h/custom shifts;
-- [ ] optional start/end + break calculation;
-- [ ] shift pattern generator (`2/2`, `3/3`, custom);
-- [ ] preview before bulk apply;
-- [ ] undo bulk changes;
-- [ ] no auto-fill block on primary screen.
+- [x] day types: work/off/vacation/sick;
+- [x] presets for 8/10/12h/custom shifts;
+- [x] optional start/end + break calculation, including overnight shifts;
+- [x] shift pattern generator (`2/2`, `3/3`, `5/2`, custom);
+- [x] preview before bulk apply;
+- [x] generated rows preserve existing records;
+- [x] undo bulk changes removes only rows inserted by that bulk operation;
+- [x] no auto-fill block on primary calendar screen — generator remains a secondary action.
 
 ## Phase 4 — Reports and data portability
 
-- [ ] detailed month/year statistics;
-- [ ] CSV export;
+- [x] detailed month statistics;
+- [x] detailed year statistics with 12-month breakdown;
+- [x] CSV month export;
 - [ ] XLSX export;
 - [ ] PDF report;
-- [ ] Android share/document picker flows;
+- [ ] complete Android share/document-provider verification — `ActivityResultContracts.CreateDocument("text/csv")` integration is implemented, but a manual round-trip through representative external document providers is still pending;
 - [ ] backup/restore;
-- [ ] export correctness tests;
-- [ ] no broad storage permission.
+- [x] export correctness unit tests: deterministic ordering, effective per-day rate/earnings, empty month and RFC-style escaping of comma/quote/newline fields;
+- [x] automated check that the app requests no broad storage permission.
 
 ## Phase 5 — Convenience surfaces
 
@@ -139,9 +141,9 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью runtime-проверенная продуктовая ревизия: `000cb868d88c7b4bdbb0f66c5124efa682fd7110`.
+После успешного CI для годовой статистики последней полностью runtime-проверенной продуктовой ревизией должна быть `2f4d8681c97c1e7ef724e2dbf14b61451c2e538c`. Этот текст публикуется только после фактически зелёного run данной ревизии.
 
-GitHub Actions успешно выполняет через repository Gradle Wrapper:
+GitHub Actions выполняет через repository Gradle Wrapper:
 
 - `testDebugUnitTest`;
 - `lintDebug`;
@@ -149,9 +151,9 @@ GitHub Actions успешно выполняет через repository Gradle Wr
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Проверены сохранение, редактирование, удаление с Undo, повторный запуск Activity, configuration recreation, day-rate override, Room migration `1 -> 2`, accessibility основных поверхностей и доступность primary actions при font scale 200%.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, CSV export surface, accessibility основных поверхностей и доступность primary actions при font scale 200%.
 
-Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закрепляются immutable commit SHA. `android-actions/setup-android` переведён на Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно. Успешный build публикует debug APK как CI artifact с ограниченным retention.
+Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
 Официальный Compose Preview Screenshot Testing остаётся experimental; visual golden tests не включаются в стабильный gate, пока tooling не станет достаточно предсказуемым для проекта.
 
