@@ -248,6 +248,17 @@ fun DayEditorContent(
                         focusManager.clearFocus()
                     },
                 )
+                ShiftTimerControls(
+                    date = date,
+                    onDurationReady = { calculatedMinutes ->
+                        workedHours = (calculatedMinutes / 60).toString()
+                        workedMinutes = (calculatedMinutes % 60)
+                            .takeIf { it != 0 }
+                            ?.toString()
+                            .orEmpty()
+                        focusManager.clearFocus()
+                    },
+                )
             }
 
             DurationFields(
