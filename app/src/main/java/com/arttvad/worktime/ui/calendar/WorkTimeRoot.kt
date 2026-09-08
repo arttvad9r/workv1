@@ -12,9 +12,14 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arttvad.worktime.R
 import com.arttvad.worktime.widget.WorkTimeWidget
+import java.time.LocalDate
+import java.time.YearMonth
 
 @Composable
-fun WorkTimeRoot(viewModel: CalendarViewModel) {
+fun WorkTimeRoot(
+    viewModel: CalendarViewModel,
+    openTodayRequestToken: Long = 0L,
+) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
@@ -30,6 +35,14 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
     val patternApplyError = stringResource(R.string.pattern_apply_error)
     val patternUndoError = stringResource(R.string.pattern_undo_error)
     val undo = stringResource(R.string.undo)
+
+    LaunchedEffect(openTodayRequestToken) {
+        if (openTodayRequestToken > 0L) {
+            val today = LocalDate.now()
+            viewModel.setVisibleMonth(YearMonth.from(today))
+            viewModel.selectDay(today)
+        }
+    }
 
     LaunchedEffect(uiState.detailedYearStatistics, uiState.preferences) {
         runCatching { WorkTimeWidget().updateAll(context) }

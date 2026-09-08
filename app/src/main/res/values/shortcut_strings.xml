@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shortcut_add_today_short">Сегодня</string>
+    <string name="shortcut_add_today_long">Добавить рабочее время за сегодня</string>
+</resources>
