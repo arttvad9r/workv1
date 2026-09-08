@@ -15,6 +15,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +38,7 @@ fun MonthStatisticsSheet(
     statistics: DetailedMonthStatistics,
     preferences: WorkPreferences,
     onDismiss: () -> Unit,
+    onExportCsv: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -54,6 +56,7 @@ fun MonthStatisticsSheet(
             statistics = statistics,
             preferences = preferences,
             onDismiss = onDismiss,
+            onExportCsv = onExportCsv,
             modifier = Modifier
                 .fillMaxWidth()
                 .imePadding(),
@@ -67,6 +70,7 @@ fun MonthStatisticsContent(
     statistics: DetailedMonthStatistics,
     preferences: WorkPreferences,
     onDismiss: () -> Unit,
+    onExportCsv: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val earned = remember(statistics.earningsMinor, preferences.currencyCode) {
@@ -162,6 +166,15 @@ fun MonthStatisticsContent(
                 ),
             ),
         )
+
+        OutlinedButton(
+            onClick = onExportCsv,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("statistics-export-csv"),
+        ) {
+            Text(stringResource(R.string.export_csv))
+        }
 
         Text(
             text = stringResource(R.string.statistics_note),

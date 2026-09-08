@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.DeviceConfigurationOverride
 import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
@@ -20,7 +21,7 @@ class MonthStatisticsConfigurationTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun detailedStatisticsRemainReachableAtTwoHundredPercentFontScale() {
+    fun detailedStatisticsAndExportRemainReachableAtTwoHundredPercentFontScale() {
         composeRule.setContent {
             WorkTimeTheme(darkTheme = false) {
                 DeviceConfigurationOverride(
@@ -44,6 +45,7 @@ class MonthStatisticsConfigurationTest {
                             currencyCode = "EUR",
                         ),
                         onDismiss = {},
+                        onExportCsv = {},
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -54,6 +56,12 @@ class MonthStatisticsConfigurationTest {
             .onNodeWithTag("statistics-sick-days")
             .performScrollTo()
             .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag("statistics-export-csv")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
 
         composeRule
             .onNodeWithTag("statistics-close")

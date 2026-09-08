@@ -1,5 +1,7 @@
 package com.arttvad.worktime.ui.calendar
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,20 +34,26 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
+import com.arttvad.worktime.domain.exporting.MonthCsvExporter
 import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val ExpandedBreakpoint = 840.dp
 
@@ -65,11 +73,37 @@ fun WorkTimeScreen(
     var paymentSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
     var statisticsOpen by rememberSaveable { mutableStateOf(false) }
+    var pendingCsv by rememberSaveable { mutableStateOf<String?>(null) }
     val initialPage = remember { pageForMonth(uiState.visibleMonth) }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
         pageCount = { PagerMonthCount },
     )
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val exportSuccess = stringResource(R.string.export_success)
+    val exportError = stringResource(R.string.export_error)
+    val csvDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/csv"),
+    ) { uri ->
+        val content = pendingCsv
+        pendingCsv = null
+        if (uri != null && content != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)
+                            ?.writer(Charsets.UTF_8)
+                            ?.use { writer -> writer.write(content) }
+                            ?: error("Document provider returned no output stream")
+                    }
+                }
+                snackbarHostState.showSnackbar(
+                    message = if (result.isSuccess) exportSuccess else exportError,
+                )
+            }
+        }
+    }
 
     LaunchedEffect(pagerState) {
         snapshotFlow { pagerState.currentPage }
@@ -162,6 +196,15 @@ fun WorkTimeScreen(
             statistics = uiState.detailedStatistics,
             preferences = uiState.preferences,
             onDismiss = { statisticsOpen = false },
+            onExportCsv = {
+                pendingCsv = MonthCsvExporter.export(
+                    month = uiState.visibleMonth,
+                    days = uiState.entries.values.toList(),
+                    hourlyRateMinor = uiState.preferences.hourlyRateMinor,
+                    currencyCode = uiState.preferences.currencyCode,
+                )
+                csvDocumentLauncher.launch("worktime-${uiState.visibleMonth}.csv")
+            },
         )
     }
 }
