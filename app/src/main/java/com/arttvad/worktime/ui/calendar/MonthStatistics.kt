@@ -54,6 +54,7 @@ fun MonthStatisticsSheet(
     preferences: WorkPreferences,
     onDismiss: () -> Unit,
     onExportCsv: () -> Unit,
+    onExportPdf: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -73,6 +74,7 @@ fun MonthStatisticsSheet(
             preferences = preferences,
             onDismiss = onDismiss,
             onExportCsv = onExportCsv,
+            onExportPdf = onExportPdf,
             modifier = Modifier
                 .fillMaxWidth()
                 .imePadding(),
@@ -88,6 +90,7 @@ fun MonthStatisticsContent(
     preferences: WorkPreferences,
     onDismiss: () -> Unit,
     onExportCsv: () -> Unit = {},
+    onExportPdf: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var scope by rememberSaveable { mutableStateOf(StatisticsScope.MONTH) }
@@ -151,6 +154,7 @@ fun MonthStatisticsContent(
                 statistics = statistics,
                 preferences = preferences,
                 onExportCsv = onExportCsv,
+                onExportPdf = onExportPdf,
             )
         } else {
             YearStatisticsBody(
@@ -166,6 +170,7 @@ private fun MonthStatisticsBody(
     statistics: DetailedMonthStatistics,
     preferences: WorkPreferences,
     onExportCsv: () -> Unit,
+    onExportPdf: () -> Unit,
 ) {
     val earned = formatEarnings(statistics.earningsMinor, preferences.currencyCode)
 
@@ -186,6 +191,15 @@ private fun MonthStatisticsBody(
             .testTag("statistics-export-csv"),
     ) {
         Text(stringResource(R.string.export_csv))
+    }
+
+    OutlinedButton(
+        onClick = onExportPdf,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("statistics-export-pdf"),
+    ) {
+        Text(stringResource(R.string.export_pdf))
     }
 
     Text(

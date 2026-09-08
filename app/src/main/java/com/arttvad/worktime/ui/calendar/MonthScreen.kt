@@ -46,8 +46,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.exporting.MonthCsvExporter
+import com.arttvad.worktime.domain.exporting.MonthReportDataBuilder
 import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
+import com.arttvad.worktime.exporting.MonthPdfExporter
+import java.io.ByteArrayOutputStream
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +77,7 @@ fun WorkTimeScreen(
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
     var statisticsOpen by rememberSaveable { mutableStateOf(false) }
     var pendingCsv by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingPdf by rememberSaveable { mutableStateOf<ByteArray?>(null) }
     val initialPage = remember { pageForMonth(uiState.visibleMonth) }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
@@ -81,8 +85,10 @@ fun WorkTimeScreen(
     )
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val exportSuccess = stringResource(R.string.export_success)
-    val exportError = stringResource(R.string.export_error)
+    val csvExportSuccess = stringResource(R.string.export_success)
+    val csvExportError = stringResource(R.string.export_error)
+    val pdfExportSuccess = stringResource(R.string.export_pdf_success)
+    val pdfExportError = stringResource(R.string.export_pdf_error)
     val csvDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv"),
     ) { uri ->
@@ -99,7 +105,27 @@ fun WorkTimeScreen(
                     }
                 }
                 snackbarHostState.showSnackbar(
-                    message = if (result.isSuccess) exportSuccess else exportError,
+                    message = if (result.isSuccess) csvExportSuccess else csvExportError,
+                )
+            }
+        }
+    }
+    val pdfDocumentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        val content = pendingPdf
+        pendingPdf = null
+        if (uri != null && content != null) {
+            scope.launch {
+                val result = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openOutputStream(uri)
+                            ?.use { output -> output.write(content) }
+                            ?: error("Document provider returned no output stream")
+                    }
+                }
+                snackbarHostState.showSnackbar(
+                    message = if (result.isSuccess) pdfExportSuccess else pdfExportError,
                 )
             }
         }
@@ -205,6 +231,37 @@ fun WorkTimeScreen(
                     currencyCode = uiState.preferences.currencyCode,
                 )
                 csvDocumentLauncher.launch("worktime-${uiState.visibleMonth}.csv")
+            },
+            onExportPdf = {
+                val month = uiState.visibleMonth
+                val days = uiState.entries.values.toList()
+                val hourlyRateMinor = uiState.preferences.hourlyRateMinor
+                val currencyCode = uiState.preferences.currencyCode
+                scope.launch {
+                    val result = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val report = MonthReportDataBuilder.build(
+                                month = month,
+                                days = days,
+                                hourlyRateMinor = hourlyRateMinor,
+                                currencyCode = currencyCode,
+                            )
+                            ByteArrayOutputStream().use { output ->
+                                MonthPdfExporter.write(output, report)
+                                output.toByteArray()
+                            }
+                        }
+                    }
+                    result.fold(
+                        onSuccess = { bytes ->
+                            pendingPdf = bytes
+                            pdfDocumentLauncher.launch("worktime-$month.pdf")
+                        },
+                        onFailure = {
+                            snackbarHostState.showSnackbar(pdfExportError)
+                        },
+                    )
+                }
             },
         )
     }
