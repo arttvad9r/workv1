@@ -11,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arttvad.worktime.R
+import com.arttvad.worktime.reminder.WorkReminderScheduler
 import com.arttvad.worktime.widget.WorkTimeWidget
 import java.time.LocalDate
 import java.time.YearMonth
@@ -46,6 +47,21 @@ fun WorkTimeRoot(
 
     LaunchedEffect(uiState.detailedYearStatistics, uiState.preferences) {
         runCatching { WorkTimeWidget().updateAll(context) }
+    }
+
+    LaunchedEffect(
+        uiState.preferences.reminderEnabled,
+        uiState.preferences.reminderHour,
+        uiState.preferences.reminderMinute,
+    ) {
+        runCatching {
+            WorkReminderScheduler.sync(
+                context = context,
+                enabled = uiState.preferences.reminderEnabled,
+                hour = uiState.preferences.reminderHour,
+                minute = uiState.preferences.reminderMinute,
+            )
+        }
     }
 
     LaunchedEffect(viewModel, snackbarHostState) {
@@ -94,6 +110,7 @@ fun WorkTimeRoot(
         onSaveDay = viewModel::saveDay,
         onDeleteDay = viewModel::deleteDay,
         onUpdatePayment = viewModel::updatePayment,
+        onUpdateReminder = viewModel::updateReminder,
         onApplyPattern = viewModel::applyPattern,
         onWriteBackup = viewModel::writeBackup,
         onRestoreBackup = viewModel::restoreBackup,

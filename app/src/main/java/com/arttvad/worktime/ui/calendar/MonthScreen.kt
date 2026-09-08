@@ -77,6 +77,7 @@ fun WorkTimeScreen(
     onSaveDay: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
     onUpdatePayment: (Long?, String) -> Unit,
+    onUpdateReminder: (Boolean, Int, Int) -> Unit,
     onApplyPattern: (List<ShiftPatternDay>) -> Unit,
     onWriteBackup: suspend (OutputStream) -> Result<Int>,
     onRestoreBackup: suspend (InputStream) -> Result<Int>,
@@ -281,6 +282,7 @@ fun WorkTimeScreen(
                 onUpdatePayment(rate, currency)
                 paymentSettingsOpen = false
             },
+            onSaveReminder = onUpdateReminder,
             onCreateBackup = {
                 backupDocumentLauncher.launch("worktime-backup-${LocalDate.now()}.wtbk")
             },

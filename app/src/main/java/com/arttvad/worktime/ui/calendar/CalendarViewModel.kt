@@ -264,6 +264,17 @@ class CalendarViewModel(
         }
     }
 
+    fun updateReminder(enabled: Boolean, hour: Int, minute: Int) {
+        if (hour !in 0..23 || minute !in 0..59) return
+        viewModelScope.launch {
+            runCatching {
+                preferencesRepository.updateReminder(enabled, hour, minute)
+            }.onFailure {
+                mutableEvents.emit(CalendarEvent.SettingsError)
+            }
+        }
+    }
+
     suspend fun writeBackup(output: OutputStream): Result<Int> =
         backupRestoreCoordinator.writeBackup(output)
 

@@ -54,4 +54,44 @@ class PaymentSettingsConfigurationTest {
             .assertIsDisplayed()
             .assertIsEnabled()
     }
+
+    @Test
+    fun reminderSaveRemainsReachableAtTwoHundredPercentFontScale() {
+        composeRule.setContent {
+            WorkTimeTheme(darkTheme = false) {
+                DeviceConfigurationOverride(
+                    DeviceConfigurationOverride.FontScale(2f),
+                ) {
+                    PaymentSettingsSheet(
+                        preferences = WorkPreferences(
+                            hourlyRateMinor = 1_500L,
+                            currencyCode = "EUR",
+                            reminderEnabled = false,
+                            reminderHour = 20,
+                            reminderMinute = 0,
+                        ),
+                        onDismiss = {},
+                        onSave = { _, _ -> },
+                        onSaveReminder = { _, _, _ -> },
+                    )
+                }
+            }
+        }
+
+        composeRule
+            .onNodeWithTag("settings-reminder-open")
+            .performScrollTo()
+            .performClick()
+
+        composeRule
+            .onNodeWithTag("settings-reminder-time")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag("settings-reminder-save")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsEnabled()
+    }
 }
