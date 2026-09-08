@@ -30,11 +30,13 @@ data class CalendarUiState(
     val preferences: WorkPreferences = WorkPreferences(),
 )
 
-enum class CalendarMessage {
-    DATA_ERROR,
-    SAVE_ERROR,
-    DELETE_ERROR,
-    SETTINGS_ERROR,
+sealed interface CalendarEvent {
+    data object DataError : CalendarEvent
+    data object SaveError : CalendarEvent
+    data object DeleteError : CalendarEvent
+    data object RestoreError : CalendarEvent
+    data object SettingsError : CalendarEvent
+    data class EntryDeleted(val entry: WorkDay) : CalendarEvent
 }
 
 class CalendarViewModel(
@@ -43,14 +45,14 @@ class CalendarViewModel(
 ) : ViewModel() {
     private val visibleMonth = MutableStateFlow(YearMonth.now())
     private val selectedDate = MutableStateFlow<LocalDate?>(null)
-    private val mutableMessages = MutableSharedFlow<CalendarMessage>(extraBufferCapacity = 1)
+    private val mutableEvents = MutableSharedFlow<CalendarEvent>(extraBufferCapacity = 1)
 
-    val messages: Flow<CalendarMessage> = mutableMessages
+    val events: Flow<CalendarEvent> = mutableEvents
 
     private val monthEntries = visibleMonth.flatMapLatest { month ->
         workDayRepository.observeMonth(month)
             .catch {
-                mutableMessages.emit(CalendarMessage.DATA_ERROR)
+                mutableEvents.emit(CalendarEvent.DataError)
                 emit(emptyList())
             }
     }
@@ -103,16 +105,27 @@ class CalendarViewModel(
             }.onSuccess {
                 selectedDate.value = null
             }.onFailure {
-                mutableMessages.emit(CalendarMessage.SAVE_ERROR)
+                mutableEvents.emit(CalendarEvent.SaveError)
             }
         }
     }
 
     fun deleteDay(date: LocalDate) {
+        val entry = uiState.value.entries[date] ?: return
         viewModelScope.launch {
             runCatching { workDayRepository.delete(date) }
-                .onSuccess { selectedDate.value = null }
-                .onFailure { mutableMessages.emit(CalendarMessage.DELETE_ERROR) }
+                .onSuccess {
+                    selectedDate.value = null
+                    mutableEvents.emit(CalendarEvent.EntryDeleted(entry))
+                }
+                .onFailure { mutableEvents.emit(CalendarEvent.DeleteError) }
+        }
+    }
+
+    fun restoreDay(entry: WorkDay) {
+        viewModelScope.launch {
+            runCatching { workDayRepository.upsert(entry) }
+                .onFailure { mutableEvents.emit(CalendarEvent.RestoreError) }
         }
     }
 
@@ -121,7 +134,7 @@ class CalendarViewModel(
             runCatching {
                 preferencesRepository.updatePayment(hourlyRateMinor, currencyCode)
             }.onFailure {
-                mutableMessages.emit(CalendarMessage.SETTINGS_ERROR)
+                mutableEvents.emit(CalendarEvent.SettingsError)
             }
         }
     }
