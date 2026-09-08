@@ -26,6 +26,7 @@ androidx-compose-foundation = { module = "androidx.compose.foundation:foundation
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+androidx-compose-ui-test-accessibility = { module = "androidx.compose.ui:ui-test-accessibility" }
 androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test" }
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test" }
