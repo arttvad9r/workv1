@@ -9,6 +9,7 @@ import com.arttvad.worktime.data.repository.RoomWorkDayRepository
 import com.arttvad.worktime.data.repository.RoomWorkProfileRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
 import com.arttvad.worktime.data.repository.WorkProfileRepository
+import kotlinx.coroutines.flow.map
 
 class WorkTimeApplication : Application() {
     val container: AppContainer by lazy { AppContainer(this) }
@@ -27,7 +28,10 @@ class AppContainer(context: Context) {
         )
         .build()
 
-    val workDayRepository: WorkDayRepository = RoomWorkDayRepository(database.workDayDao())
-    val workProfileRepository: WorkProfileRepository = RoomWorkProfileRepository(database.workProfileDao())
     val preferencesRepository = WorkPreferencesRepository(context.applicationContext)
+    val workDayRepository: WorkDayRepository = RoomWorkDayRepository(
+        dao = database.workDayDao(),
+        activeProfileId = preferencesRepository.preferences.map { it.activeProfileId },
+    )
+    val workProfileRepository: WorkProfileRepository = RoomWorkProfileRepository(database.workProfileDao())
 }
