@@ -20,7 +20,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
-import com.arttvad.worktime.data.preferences.ActiveShiftSession
 import com.arttvad.worktime.domain.calculation.ShiftTimerCalculator
 import java.time.Instant
 import java.time.LocalDate
@@ -35,12 +34,10 @@ private val ShiftTimerClockFormatter = DateTimeFormatter.ofPattern("HH:mm")
 @Composable
 internal fun ShiftTimerControls(
     date: LocalDate,
-    activeShift: ActiveShiftSession?,
-    onStartShift: suspend (LocalDate) -> Result<Unit>,
-    onStopShift: suspend (LocalDate) -> Result<Int>,
-    onResetShift: suspend () -> Result<Unit>,
     onDurationReady: (Int) -> Unit,
 ) {
+    val environment = LocalShiftTimerEnvironment.current ?: return
+    val activeShift = environment.activeShift
     val scope = rememberCoroutineScope()
     var errorVisible by rememberSaveable(date.toString()) { mutableStateOf(false) }
     var nowMillis by rememberSaveable(activeShift?.startedAtEpochMillis) {
@@ -70,7 +67,7 @@ internal fun ShiftTimerControls(
                     onClick = {
                         errorVisible = false
                         scope.launch {
-                            onStartShift(date).onFailure { errorVisible = true }
+                            environment.onStartShift(date).onFailure { errorVisible = true }
                         }
                     },
                     modifier = Modifier
@@ -106,7 +103,7 @@ internal fun ShiftTimerControls(
                     onClick = {
                         errorVisible = false
                         scope.launch {
-                            onStopShift(date).fold(
+                            environment.onStopShift(date).fold(
                                 onSuccess = onDurationReady,
                                 onFailure = { errorVisible = true },
                             )
@@ -122,7 +119,7 @@ internal fun ShiftTimerControls(
                     onClick = {
                         errorVisible = false
                         scope.launch {
-                            onResetShift().onFailure { errorVisible = true }
+                            environment.onResetShift().onFailure { errorVisible = true }
                         }
                     },
                     modifier = Modifier
@@ -147,7 +144,7 @@ internal fun ShiftTimerControls(
                     onClick = {
                         errorVisible = false
                         scope.launch {
-                            onResetShift().onFailure { errorVisible = true }
+                            environment.onResetShift().onFailure { errorVisible = true }
                         }
                     },
                     modifier = Modifier
