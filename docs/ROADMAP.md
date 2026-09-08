@@ -121,7 +121,7 @@ Only after core metrics/usability are stable:
 - [x] app widget — Glance 1.2.0, read-only current-month summary with adaptive compact/expanded content and tap-through to the app;
 - [x] quick-add action — dynamic launcher shortcut «Сегодня» reuses the existing single Activity and opens the real editor for the current date;
 - [x] optional reminder — opt-in local daily notification with persisted time, runtime notification permission, inexact alarm scheduling, reboot/time-zone rescheduling and no exact-alarm special access;
-- [ ] calendar/date shortcuts;
+- [x] calendar/date shortcuts — tapping the month title opens the stable Material 3 DatePicker for 1900–2199 and jumps directly into the existing editor for the confirmed date;
 - [ ] optional timer/check-in/out.
 
 ## Phase 6 — Multiple work profiles
@@ -145,7 +145,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью runtime-проверенная продуктовая ревизия после reminder gate: `e1d09e07146ee3b5a058b28fdfac8fb7a41f271c`.
+Последняя полностью runtime-проверенная продуктовая ревизия после date-shortcut gate: `1d46221f3c12cdc37381ae6ba4ec79ea20312f0e`.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -155,7 +155,7 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, export surfaces, PDF generation/validity, backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, accessibility основных поверхностей и доступность primary actions при font scale 200%. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, export surfaces, PDF generation/validity, backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания.
 
 Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
