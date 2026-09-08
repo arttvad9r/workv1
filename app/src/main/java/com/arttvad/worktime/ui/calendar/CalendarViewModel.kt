@@ -13,6 +13,7 @@ import com.arttvad.worktime.domain.calculation.DetailedMonthStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.DetailedYearStatistics
 import com.arttvad.worktime.domain.calculation.DetailedYearStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.MonthSummaryCalculator
+import com.arttvad.worktime.domain.calculation.ShiftTimerCalculator
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
 import com.arttvad.worktime.domain.model.WorkDay
@@ -273,6 +274,31 @@ class CalendarViewModel(
                 mutableEvents.emit(CalendarEvent.SettingsError)
             }
         }
+    }
+
+    suspend fun startShift(date: LocalDate): Result<Unit> {
+        if (date != LocalDate.now()) {
+            return Result.failure(IllegalArgumentException("A tracked shift can only start for today"))
+        }
+        return runCatching {
+            preferencesRepository.startShift(date)
+        }
+    }
+
+    suspend fun stopShift(date: LocalDate): Result<Int> = runCatching {
+        val activeShift = preferencesRepository.preferences.first().activeShift
+            ?: error("No active shift session")
+        check(activeShift.date == date) { "The active shift belongs to another date" }
+        val elapsedMinutes = ShiftTimerCalculator.elapsedMinutes(
+            startedAtEpochMillis = activeShift.startedAtEpochMillis,
+            endedAtEpochMillis = System.currentTimeMillis(),
+        ) ?: error("Tracked shift duration cannot be applied to the editor")
+        preferencesRepository.clearActiveShift()
+        elapsedMinutes
+    }
+
+    suspend fun resetShift(): Result<Unit> = runCatching {
+        preferencesRepository.clearActiveShift()
     }
 
     suspend fun writeBackup(output: OutputStream): Result<Int> =
