@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.model.WorkDayType
+import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -58,8 +60,10 @@ fun WorkTimeScreen(
     onSaveDay: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
     onUpdatePayment: (Long?, String) -> Unit,
+    onApplyPattern: (List<ShiftPatternDay>) -> Unit,
 ) {
     var paymentSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
     val initialPage = remember { pageForMonth(uiState.visibleMonth) }
     val pagerState = rememberPagerState(
         initialPage = initialPage,
@@ -79,6 +83,12 @@ fun WorkTimeScreen(
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
+                    IconButton(onClick = { patternGeneratorOpen = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.EventRepeat,
+                            contentDescription = stringResource(R.string.pattern_open),
+                        )
+                    }
                     IconButton(onClick = { paymentSettingsOpen = true }) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
@@ -132,6 +142,14 @@ fun WorkTimeScreen(
                 onUpdatePayment(rate, currency)
                 paymentSettingsOpen = false
             },
+        )
+    }
+
+    if (patternGeneratorOpen) {
+        PatternGeneratorSheet(
+            visibleMonth = uiState.visibleMonth,
+            onDismiss = { patternGeneratorOpen = false },
+            onApply = onApplyPattern,
         )
     }
 }

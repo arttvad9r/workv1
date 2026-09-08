@@ -11,6 +11,7 @@ import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
+import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -38,7 +39,11 @@ sealed interface CalendarEvent {
     data object DeleteError : CalendarEvent
     data object RestoreError : CalendarEvent
     data object SettingsError : CalendarEvent
+    data object PatternApplyError : CalendarEvent
+    data object PatternUndoError : CalendarEvent
+    data object PatternNoChanges : CalendarEvent
     data class EntryDeleted(val entry: WorkDay) : CalendarEvent
+    data class PatternApplied(val insertedDates: List<LocalDate>) : CalendarEvent
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -140,6 +145,46 @@ class CalendarViewModel(
         viewModelScope.launch {
             runCatching { workDayRepository.upsert(entry) }
                 .onFailure { mutableEvents.emit(CalendarEvent.RestoreError) }
+        }
+    }
+
+    fun applyPattern(days: List<ShiftPatternDay>) {
+        if (days.isEmpty()) return
+        if (days.any { day -> WorkDayValidator.validate(day.type, day.workedMinutes, 0) != null }) return
+
+        viewModelScope.launch {
+            val timestamp = System.currentTimeMillis()
+            runCatching {
+                workDayRepository.insertMissing(
+                    days.map { day ->
+                        WorkDay(
+                            date = day.date,
+                            workedMinutes = day.workedMinutes,
+                            overtimeMinutes = 0,
+                            note = "",
+                            updatedAtEpochMillis = timestamp,
+                            hourlyRateOverrideMinor = null,
+                            type = day.type,
+                        )
+                    },
+                )
+            }.onSuccess { insertedDates ->
+                if (insertedDates.isEmpty()) {
+                    mutableEvents.emit(CalendarEvent.PatternNoChanges)
+                } else {
+                    mutableEvents.emit(CalendarEvent.PatternApplied(insertedDates))
+                }
+            }.onFailure {
+                mutableEvents.emit(CalendarEvent.PatternApplyError)
+            }
+        }
+    }
+
+    fun undoPattern(insertedDates: List<LocalDate>) {
+        if (insertedDates.isEmpty()) return
+        viewModelScope.launch {
+            runCatching { workDayRepository.deleteAll(insertedDates) }
+                .onFailure { mutableEvents.emit(CalendarEvent.PatternUndoError) }
         }
     }
 

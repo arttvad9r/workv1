@@ -21,6 +21,10 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
     val restoreError = stringResource(R.string.restore_error)
     val settingsError = stringResource(R.string.settings_error)
     val entryDeleted = stringResource(R.string.entry_deleted)
+    val patternApplied = stringResource(R.string.pattern_applied)
+    val patternNoChanges = stringResource(R.string.pattern_no_changes)
+    val patternApplyError = stringResource(R.string.pattern_apply_error)
+    val patternUndoError = stringResource(R.string.pattern_undo_error)
     val undo = stringResource(R.string.undo)
 
     LaunchedEffect(viewModel, snackbarHostState) {
@@ -31,6 +35,9 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
                 CalendarEvent.DeleteError -> snackbarHostState.showSnackbar(deleteError)
                 CalendarEvent.RestoreError -> snackbarHostState.showSnackbar(restoreError)
                 CalendarEvent.SettingsError -> snackbarHostState.showSnackbar(settingsError)
+                CalendarEvent.PatternApplyError -> snackbarHostState.showSnackbar(patternApplyError)
+                CalendarEvent.PatternUndoError -> snackbarHostState.showSnackbar(patternUndoError)
+                CalendarEvent.PatternNoChanges -> snackbarHostState.showSnackbar(patternNoChanges)
                 is CalendarEvent.EntryDeleted -> {
                     val result = snackbarHostState.showSnackbar(
                         message = entryDeleted,
@@ -40,6 +47,17 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
                     )
                     if (result == SnackbarResult.ActionPerformed) {
                         viewModel.restoreDay(event.entry)
+                    }
+                }
+                is CalendarEvent.PatternApplied -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = patternApplied,
+                        actionLabel = undo,
+                        withDismissAction = true,
+                        duration = SnackbarDuration.Long,
+                    )
+                    if (result == SnackbarResult.ActionPerformed) {
+                        viewModel.undoPattern(event.insertedDates)
                     }
                 }
             }
@@ -55,5 +73,6 @@ fun WorkTimeRoot(viewModel: CalendarViewModel) {
         onSaveDay = viewModel::saveDay,
         onDeleteDay = viewModel::deleteDay,
         onUpdatePayment = viewModel::updatePayment,
+        onApplyPattern = viewModel::applyPattern,
     )
 }

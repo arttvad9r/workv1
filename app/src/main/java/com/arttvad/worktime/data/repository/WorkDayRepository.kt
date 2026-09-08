@@ -13,6 +13,8 @@ interface WorkDayRepository {
     fun observeMonth(month: YearMonth): Flow<List<WorkDay>>
     suspend fun upsert(day: WorkDay)
     suspend fun delete(date: LocalDate)
+    suspend fun insertMissing(days: List<WorkDay>): List<LocalDate>
+    suspend fun deleteAll(dates: List<LocalDate>)
 }
 
 class RoomWorkDayRepository(
@@ -30,6 +32,13 @@ class RoomWorkDayRepository(
 
     override suspend fun delete(date: LocalDate) {
         dao.deleteByDate(date.toString())
+    }
+
+    override suspend fun insertMissing(days: List<WorkDay>): List<LocalDate> =
+        dao.insertMissing(days.map(WorkDay::toEntity)).map(LocalDate::parse)
+
+    override suspend fun deleteAll(dates: List<LocalDate>) {
+        dao.deleteByDates(dates.map(LocalDate::toString))
     }
 }
 
