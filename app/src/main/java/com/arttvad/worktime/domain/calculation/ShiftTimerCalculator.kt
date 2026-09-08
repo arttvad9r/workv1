@@ -1,7 +1,7 @@
 package com.arttvad.worktime.domain.calculation
 
 object ShiftTimerCalculator {
-    const val MAX_TRACKED_MINUTES: Int = 99 * 60 + 59
+    const val MAX_TRACKED_MINUTES: Int = 24 * 60
 
     fun elapsedMinutes(
         startedAtEpochMillis: Long,
