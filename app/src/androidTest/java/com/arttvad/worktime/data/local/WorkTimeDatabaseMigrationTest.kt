@@ -52,7 +52,7 @@ class WorkTimeDatabaseMigrationTest {
                     (`date`, `workedMinutes`, `overtimeMinutes`, `note`, `updatedAtEpochMillis`)
                 VALUES (?, ?, ?, ?, ?)
                 """.trimIndent(),
-                arrayOf("2026-09-08", 480, 30, "legacy", 1234L),
+                arrayOf<Any>("2026-09-08", 480, 30, "legacy", 1234L),
             )
             legacyDatabase.version = 1
         }
