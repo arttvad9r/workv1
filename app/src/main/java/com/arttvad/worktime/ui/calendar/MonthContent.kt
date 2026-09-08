@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Today
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +47,7 @@ internal fun MonthContent(
 ) {
     val scope = rememberCoroutineScope()
     val displayedMonth = monthForPage(pagerState.currentPage)
+    val currentMonth = YearMonth.now()
 
     Column(
         modifier = modifier
@@ -57,6 +59,7 @@ internal fun MonthContent(
             month = displayedMonth,
             canGoPrevious = pagerState.currentPage > 0,
             canGoNext = pagerState.currentPage < PagerMonthCount - 1,
+            showToday = displayedMonth != currentMonth,
             onPrevious = {
                 if (pagerState.currentPage > 0) {
                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) }
@@ -66,6 +69,9 @@ internal fun MonthContent(
                 if (pagerState.currentPage < PagerMonthCount - 1) {
                     scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) }
                 }
+            },
+            onToday = {
+                scope.launch { pagerState.animateScrollToPage(pageForMonth(currentMonth)) }
             },
         )
 
@@ -106,8 +112,10 @@ private fun MonthHeader(
     month: YearMonth,
     canGoPrevious: Boolean,
     canGoNext: Boolean,
+    showToday: Boolean,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onToday: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -125,7 +133,16 @@ private fun MonthHeader(
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f),
+            maxLines = 1,
         )
+        if (showToday) {
+            IconButton(onClick = onToday) {
+                Icon(
+                    imageVector = Icons.Rounded.Today,
+                    contentDescription = stringResource(R.string.today),
+                )
+            }
+        }
         IconButton(onClick = onNext, enabled = canGoNext) {
             Icon(
                 imageVector = Icons.Rounded.ChevronRight,
