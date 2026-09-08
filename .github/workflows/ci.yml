@@ -77,13 +77,8 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: |
-            set +e
-            ./gradlew connectedDebugAndroidTest --stacktrace
-            status=$?
-            if [ "$status" -ne 0 ]; then
-              echo "::group::Instrumentation test XML results"
-              find app/build -path '*androidTest-results*' -type f -name '*.xml' -print -exec cat {} \; || true
-              echo "::endgroup::"
-            fi
-            exit "$status"
+          script: >-
+            bash -lc 'set +e; ./gradlew connectedDebugAndroidTest --stacktrace; status=$?;
+            if [ "$status" -ne 0 ]; then echo "::group::Instrumentation test XML results";
+            find app/build -path "*androidTest-results*" -type f -name "*.xml" -print -exec cat {} \; || true;
+            echo "::endgroup::"; fi; exit "$status"'
