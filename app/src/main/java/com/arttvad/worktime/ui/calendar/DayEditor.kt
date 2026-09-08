@@ -34,6 +34,8 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -351,11 +353,19 @@ private fun DayTypeSelector(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         WorkDayType.entries.forEach { type ->
+            val fullLabel = dayTypeLabel(type)
             FilterChip(
                 selected = selectedType == type,
                 onClick = { onTypeSelected(type) },
-                label = { Text(dayTypeLabel(type)) },
-                modifier = Modifier.testTag("day-editor-type-${type.name.lowercase()}"),
+                label = {
+                    Text(
+                        text = dayTypeSelectorLabel(type),
+                        maxLines = 1,
+                    )
+                },
+                modifier = Modifier
+                    .testTag("day-editor-type-${type.name.lowercase()}")
+                    .semantics { contentDescription = fullLabel },
             )
         }
     }
@@ -368,6 +378,16 @@ private fun dayTypeLabel(type: WorkDayType): String = stringResource(
         WorkDayType.DAY_OFF -> R.string.day_type_day_off
         WorkDayType.VACATION -> R.string.day_type_vacation
         WorkDayType.SICK -> R.string.day_type_sick
+    },
+)
+
+@Composable
+private fun dayTypeSelectorLabel(type: WorkDayType): String = stringResource(
+    when (type) {
+        WorkDayType.WORK -> R.string.day_type_work
+        WorkDayType.DAY_OFF -> R.string.day_type_day_off_short
+        WorkDayType.VACATION -> R.string.day_type_vacation_short
+        WorkDayType.SICK -> R.string.day_type_sick_short
     },
 )
 

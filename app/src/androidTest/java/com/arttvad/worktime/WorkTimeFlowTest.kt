@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.tryPerformAccessibilityChecks
@@ -96,7 +97,7 @@ class WorkTimeFlowTest {
 
                 onNodeWithTag("settings-hourly-rate").performTextReplacement("12.50")
                 onNodeWithTag("settings-currency").performTextReplacement("EUR")
-                onNodeWithTag("settings-save").performClick()
+                onNodeWithTag("settings-save").performScrollTo().performClick()
 
                 waitUntil(timeoutMillis = 5_000) {
                     currentPayment() == (1_250L to "EUR")
@@ -144,9 +145,9 @@ class WorkTimeFlowTest {
                     }.getOrDefault(false)
                 }
                 onNodeWithTag("day-editor-worked-hours").performTextInput("8")
-                onNodeWithTag("day-editor-add-rate-override").performClick()
-                onNodeWithTag("day-editor-rate-override").performTextInput("20")
-                onNodeWithTag("day-editor-save").performClick()
+                onNodeWithTag("day-editor-add-rate-override").performScrollTo().performClick()
+                onNodeWithTag("day-editor-rate-override").performScrollTo().performTextInput("20")
+                onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
                 waitUntil(timeoutMillis = 5_000) {
                     currentEntry()?.hourlyRateOverrideMinor == 2_000L
@@ -184,9 +185,9 @@ class WorkTimeFlowTest {
                 }.getOrDefault(false)
             }
 
-            onNodeWithTag("day-editor-preset-12").performClick()
+            onNodeWithTag("day-editor-preset-12").performScrollTo().performClick()
             onNodeWithTag("day-editor-worked-hours").assertTextContains("12")
-            onNodeWithTag("day-editor-save").performClick()
+            onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
             waitUntil(timeoutMillis = 5_000) {
                 currentEntry()?.workedMinutes == 12 * 60
@@ -205,8 +206,8 @@ class WorkTimeFlowTest {
                 }.getOrDefault(false)
             }
 
-            onNodeWithTag("day-editor-type-day_off").performClick()
-            onNodeWithTag("day-editor-save").performClick()
+            onNodeWithTag("day-editor-type-day_off").performScrollTo().performClick()
+            onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
             waitUntil(timeoutMillis = 5_000) {
                 currentEntry()?.let { entry ->
@@ -252,7 +253,7 @@ class WorkTimeFlowTest {
             }
             onNodeWithTag("day-editor-worked-hours").performTextInput("8")
             onNodeWithTag("day-editor-worked-minutes").performTextInput("30")
-            onNodeWithTag("day-editor-save").performClick()
+            onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
             waitUntil(timeoutMillis = 5_000) {
                 currentEntry()?.workedMinutes == 8 * 60 + 30
@@ -267,7 +268,7 @@ class WorkTimeFlowTest {
             }
             onNodeWithTag("day-editor-worked-hours").performTextReplacement("9")
             onNodeWithTag("day-editor-worked-minutes").performTextReplacement("")
-            onNodeWithTag("day-editor-save").performClick()
+            onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
             waitUntil(timeoutMillis = 5_000) {
                 currentEntry()?.workedMinutes == 9 * 60
@@ -280,7 +281,7 @@ class WorkTimeFlowTest {
                     true
                 }.getOrDefault(false)
             }
-            onNodeWithTag("day-editor-delete").performClick()
+            onNodeWithTag("day-editor-delete").performScrollTo().performClick()
 
             waitUntil(timeoutMillis = 5_000) { currentEntry() == null }
             waitUntil(timeoutMillis = 5_000) {
@@ -347,8 +348,8 @@ class WorkTimeFlowTest {
             }
             onNodeWithTag("day-editor-worked-hours").performTextInput("7")
             onNodeWithTag("day-editor-worked-minutes").performTextInput("45")
-            onNodeWithTag("day-editor-add-note").performClick()
-            onNodeWithTag("day-editor-note").performTextInput("черновик")
+            onNodeWithTag("day-editor-add-note").performScrollTo().performClick()
+            onNodeWithTag("day-editor-note").performScrollTo().performTextInput("черновик")
 
             scenario.recreate()
 
