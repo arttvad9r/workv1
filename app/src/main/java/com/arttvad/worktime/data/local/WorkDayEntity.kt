@@ -11,4 +11,5 @@ data class WorkDayEntity(
     val note: String,
     val updatedAtEpochMillis: Long,
     val hourlyRateOverrideMinor: Long? = null,
+    val dayType: String = "WORK",
 )

@@ -2,6 +2,7 @@ package com.arttvad.worktime
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.accessibility.enableAccessibilityChecks
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -17,6 +18,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.arttvad.worktime.data.repository.WorkDayRepository
 import com.arttvad.worktime.domain.model.WorkDay
+import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.first
@@ -189,6 +191,48 @@ class WorkTimeFlowTest {
             waitUntil(timeoutMillis = 5_000) {
                 currentEntry()?.workedMinutes == 12 * 60
             }
+        }
+    }
+
+    @Test
+    fun dayOffPersistsAcrossRelaunch() = runEmptyComposeUiTest {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onNodeWithTag(dayTag).performClick()
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag("day-editor-type-day_off").assertExists()
+                    true
+                }.getOrDefault(false)
+            }
+
+            onNodeWithTag("day-editor-type-day_off").performClick()
+            onNodeWithTag("day-editor-save").performClick()
+
+            waitUntil(timeoutMillis = 5_000) {
+                currentEntry()?.let { entry ->
+                    entry.type == WorkDayType.DAY_OFF &&
+                        entry.workedMinutes == 0 &&
+                        entry.overtimeMinutes == 0 &&
+                        entry.hourlyRateOverrideMinor == null
+                } == true
+            }
+        }
+
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag(dayTag).assertExists()
+                    true
+                }.getOrDefault(false)
+            }
+            onNodeWithTag(dayTag).performClick()
+            waitUntil(timeoutMillis = 5_000) {
+                runCatching {
+                    onNodeWithTag("day-editor-type-day_off").assertExists()
+                    true
+                }.getOrDefault(false)
+            }
+            onNodeWithTag("day-editor-type-day_off").assertIsSelected()
         }
     }
 

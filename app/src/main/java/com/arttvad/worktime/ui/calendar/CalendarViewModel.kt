@@ -10,6 +10,7 @@ import com.arttvad.worktime.domain.calculation.MonthSummaryCalculator
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
 import com.arttvad.worktime.domain.model.WorkDay
+import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -92,13 +93,15 @@ class CalendarViewModel(
 
     fun saveDay(
         date: LocalDate,
+        type: WorkDayType,
         workedMinutes: Int,
         overtimeMinutes: Int,
         note: String,
         hourlyRateOverrideMinor: Long?,
     ) {
-        if (WorkDayValidator.validate(workedMinutes, overtimeMinutes) != null) return
+        if (WorkDayValidator.validate(type, workedMinutes, overtimeMinutes) != null) return
         if (hourlyRateOverrideMinor != null && hourlyRateOverrideMinor < 0) return
+        if (type != WorkDayType.WORK && hourlyRateOverrideMinor != null) return
 
         viewModelScope.launch {
             runCatching {
@@ -110,6 +113,7 @@ class CalendarViewModel(
                         note = note.trim(),
                         updatedAtEpochMillis = System.currentTimeMillis(),
                         hourlyRateOverrideMinor = hourlyRateOverrideMinor,
+                        type = type,
                     ),
                 )
             }.onSuccess {

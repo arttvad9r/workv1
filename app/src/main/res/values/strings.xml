@@ -34,6 +34,13 @@
     <string name="add_day_rate_override">Другая ставка</string>
     <string name="use_base_rate">Использовать базовую ставку</string>
     <string name="invalid_day_rate">Введите корректную неотрицательную ставку</string>
+    <string name="day_type_work">Работа</string>
+    <string name="day_type_day_off">Выходной</string>
+    <string name="day_type_vacation">Отпуск</string>
+    <string name="day_type_sick">Больничный</string>
+    <string name="day_type_day_off_short">Вых</string>
+    <string name="day_type_vacation_short">Отп</string>
+    <string name="day_type_sick_short">Бол</string>
     <string name="tap_day_hint">Нажмите на день, чтобы добавить часы</string>
     <string name="data_error">Не удалось прочитать данные</string>
     <string name="save_error">Не удалось сохранить данные</string>

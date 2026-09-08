@@ -3,6 +3,7 @@ package com.arttvad.worktime.data.repository
 import com.arttvad.worktime.data.local.WorkDayDao
 import com.arttvad.worktime.data.local.WorkDayEntity
 import com.arttvad.worktime.domain.model.WorkDay
+import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.Flow
@@ -39,6 +40,7 @@ private fun WorkDayEntity.toDomain() = WorkDay(
     note = note,
     updatedAtEpochMillis = updatedAtEpochMillis,
     hourlyRateOverrideMinor = hourlyRateOverrideMinor,
+    type = WorkDayType.valueOf(dayType),
 )
 
 private fun WorkDay.toEntity() = WorkDayEntity(
@@ -48,4 +50,5 @@ private fun WorkDay.toEntity() = WorkDayEntity(
     note = note,
     updatedAtEpochMillis = updatedAtEpochMillis,
     hourlyRateOverrideMinor = hourlyRateOverrideMinor,
+    dayType = type.name,
 )

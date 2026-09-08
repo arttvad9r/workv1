@@ -77,7 +77,7 @@ class MonthCalendarConfigurationTest {
                         entry = entry,
                         currencyCode = "EUR",
                         onDismiss = {},
-                        onSave = { _, _, _, _, _ -> },
+                        onSave = { _, _, _, _, _, _ -> },
                         onDelete = {},
                         modifier = Modifier.fillMaxSize(),
                     )

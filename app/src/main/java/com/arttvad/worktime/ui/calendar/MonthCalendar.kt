@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.calendar.MonthGridBuilder
 import com.arttvad.worktime.domain.model.WorkDay
+import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -111,8 +112,10 @@ private fun DayCell(
     val durationDescription = listOf(hoursDescription, minutesDescription)
         .filter(String::isNotBlank)
         .joinToString(" ")
+    val typeDescription = entry?.takeIf { it.type != WorkDayType.WORK }?.let { dayTypeLabel(it.type) }.orEmpty()
     val description = listOf(
         formatDayTitle(date),
+        typeDescription,
         durationDescription,
         if (entry != null) stringResource(R.string.day_has_entry) else "",
         if (isToday) stringResource(R.string.day_today) else "",
@@ -149,14 +152,42 @@ private fun DayCell(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isToday || isSelected) FontWeight.SemiBold else FontWeight.Normal,
             )
-            if (entry != null) {
+            entry?.let { day ->
                 Text(
-                    text = formatDurationShort(entry.workedMinutes),
+                    text = if (day.type == WorkDayType.WORK) {
+                        formatDurationShort(day.workedMinutes)
+                    } else {
+                        dayTypeShortLabel(day.type)
+                    },
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (day.type == WorkDayType.WORK) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    },
                     maxLines = 1,
                 )
             }
         }
     }
 }
+
+@Composable
+private fun dayTypeLabel(type: WorkDayType): String = stringResource(
+    when (type) {
+        WorkDayType.WORK -> R.string.day_type_work
+        WorkDayType.DAY_OFF -> R.string.day_type_day_off
+        WorkDayType.VACATION -> R.string.day_type_vacation
+        WorkDayType.SICK -> R.string.day_type_sick
+    },
+)
+
+@Composable
+private fun dayTypeShortLabel(type: WorkDayType): String = stringResource(
+    when (type) {
+        WorkDayType.WORK -> R.string.day_type_work
+        WorkDayType.DAY_OFF -> R.string.day_type_day_off_short
+        WorkDayType.VACATION -> R.string.day_type_vacation_short
+        WorkDayType.SICK -> R.string.day_type_sick_short
+    },
+)

@@ -2,6 +2,7 @@ package com.arttvad.worktime.domain
 
 import com.arttvad.worktime.domain.calculation.WorkDayValidationError
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
+import com.arttvad.worktime.domain.model.WorkDayType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -13,7 +14,7 @@ class WorkDayValidatorTest {
     }
 
     @Test
-    fun zeroWorkedTimeIsRejected() {
+    fun zeroWorkedTimeIsRejectedForWorkDay() {
         assertEquals(
             WorkDayValidationError.INVALID_WORKED_TIME,
             WorkDayValidator.validate(workedMinutes = 0, overtimeMinutes = 0),
@@ -33,6 +34,29 @@ class WorkDayValidatorTest {
         assertEquals(
             WorkDayValidationError.INVALID_WORKED_TIME,
             WorkDayValidator.validate(workedMinutes = 24 * 60 + 1, overtimeMinutes = 0),
+        )
+    }
+
+    @Test
+    fun nonWorkDayAllowsZeroTime() {
+        assertNull(
+            WorkDayValidator.validate(
+                type = WorkDayType.DAY_OFF,
+                workedMinutes = 0,
+                overtimeMinutes = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun nonWorkDayRejectsWorkedTime() {
+        assertEquals(
+            WorkDayValidationError.NON_WORK_HAS_TIME,
+            WorkDayValidator.validate(
+                type = WorkDayType.VACATION,
+                workedMinutes = 60,
+                overtimeMinutes = 0,
+            ),
         )
     }
 }

@@ -29,7 +29,7 @@ class WorkTimeDatabaseMigrationTest {
     }
 
     @Test
-    fun migration1To2PreservesExistingRowsAndAddsNullableRateOverride() {
+    fun migration1To3PreservesExistingRowsAndDefaultsLegacyEntriesToWork() {
         val databaseFile = context.getDatabasePath(DatabaseName)
         databaseFile.parentFile?.mkdirs()
 
@@ -62,7 +62,10 @@ class WorkTimeDatabaseMigrationTest {
             WorkTimeDatabase::class.java,
             DatabaseName,
         )
-            .addMigrations(WorkTimeDatabase.MIGRATION_1_2)
+            .addMigrations(
+                WorkTimeDatabase.MIGRATION_1_2,
+                WorkTimeDatabase.MIGRATION_2_3,
+            )
             .build()
 
         try {
@@ -79,6 +82,7 @@ class WorkTimeDatabaseMigrationTest {
             assertEquals("legacy", migrated.note)
             assertEquals(1234L, migrated.updatedAtEpochMillis)
             assertNull(migrated.hourlyRateOverrideMinor)
+            assertEquals("WORK", migrated.dayType)
         } finally {
             database.close()
         }

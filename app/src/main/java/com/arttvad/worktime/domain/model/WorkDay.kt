@@ -9,4 +9,12 @@ data class WorkDay(
     val note: String,
     val updatedAtEpochMillis: Long,
     val hourlyRateOverrideMinor: Long? = null,
+    val type: WorkDayType = WorkDayType.WORK,
 )
+
+enum class WorkDayType {
+    WORK,
+    DAY_OFF,
+    VACATION,
+    SICK,
+}

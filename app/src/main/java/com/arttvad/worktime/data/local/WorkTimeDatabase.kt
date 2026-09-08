@@ -8,7 +8,7 @@ import androidx.sqlite.execSQL
 
 @Database(
     entities = [WorkDayEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class WorkTimeDatabase : RoomDatabase() {
@@ -19,6 +19,14 @@ abstract class WorkTimeDatabase : RoomDatabase() {
             override fun migrate(connection: SQLiteConnection) {
                 connection.execSQL(
                     "ALTER TABLE `work_days` ADD COLUMN `hourlyRateOverrideMinor` INTEGER",
+                )
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(connection: SQLiteConnection) {
+                connection.execSQL(
+                    "ALTER TABLE `work_days` ADD COLUMN `dayType` TEXT NOT NULL DEFAULT 'WORK'",
                 )
             }
         }

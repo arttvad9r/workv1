@@ -40,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
+import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -54,7 +55,7 @@ fun WorkTimeScreen(
     onVisibleMonthChanged: (YearMonth) -> Unit,
     onDaySelected: (LocalDate) -> Unit,
     onDismissDayEditor: () -> Unit,
-    onSaveDay: (LocalDate, Int, Int, String, Long?) -> Unit,
+    onSaveDay: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
     onUpdatePayment: (Long?, String) -> Unit,
 ) {
@@ -162,7 +163,7 @@ private fun ExpandedMonthLayout(
     pagerState: PagerState,
     onDaySelected: (LocalDate) -> Unit,
     onDismissDayEditor: () -> Unit,
-    onSaveDay: (LocalDate, Int, Int, String, Long?) -> Unit,
+    onSaveDay: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDeleteDay: (LocalDate) -> Unit,
 ) {
     Row(

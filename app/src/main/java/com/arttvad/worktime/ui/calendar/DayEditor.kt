@@ -41,6 +41,7 @@ import com.arttvad.worktime.R
 import com.arttvad.worktime.domain.calculation.MoneyFormatter
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.WorkDay
+import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,7 +51,7 @@ fun DayEditorSheet(
     entry: WorkDay?,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onSave: (LocalDate, Int, Int, String, Long?) -> Unit,
+    onSave: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDelete: (LocalDate) -> Unit,
 ) {
     ModalBottomSheet(
@@ -84,10 +85,15 @@ fun DayEditorContent(
     entry: WorkDay?,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onSave: (LocalDate, Int, Int, String, Long?) -> Unit,
+    onSave: (LocalDate, WorkDayType, Int, Int, String, Long?) -> Unit,
     onDelete: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedTypeName by rememberSaveable(date.toString(), entry?.updatedAtEpochMillis) {
+        mutableStateOf(entry?.type?.name ?: WorkDayType.WORK.name)
+    }
+    val selectedType = WorkDayType.valueOf(selectedTypeName)
+
     var workedHours by rememberSaveable(date.toString(), entry?.updatedAtEpochMillis) {
         mutableStateOf(entry?.workedMinutes?.div(60)?.toString().orEmpty())
     }
@@ -132,20 +138,28 @@ fun DayEditorContent(
         rateOverrideInput.isBlank() ||
         rateOverrideMinor != null
 
-    val validationMessage = when {
-        workedTouched && workedTotal == null -> stringResource(R.string.invalid_duration)
-        workedTouched && workedTotal == 0 -> stringResource(R.string.empty_day_error)
-        overtimeTouched && overtimeTotal == null -> stringResource(R.string.invalid_duration)
-        workedTotal != null && overtimeTotal != null && overtimeTotal > workedTotal ->
-            stringResource(R.string.invalid_overtime)
-        else -> null
+    val validationMessage = if (selectedType == WorkDayType.WORK) {
+        when {
+            workedTouched && workedTotal == null -> stringResource(R.string.invalid_duration)
+            workedTouched && workedTotal == 0 -> stringResource(R.string.empty_day_error)
+            overtimeTouched && overtimeTotal == null -> stringResource(R.string.invalid_duration)
+            workedTotal != null && overtimeTotal != null && overtimeTotal > workedTotal ->
+                stringResource(R.string.invalid_overtime)
+            else -> null
+        }
+    } else {
+        null
     }
 
-    val canSave = workedTotal != null &&
-        workedTotal > 0 &&
-        overtimeTotal != null &&
-        WorkDayValidator.validate(workedTotal, overtimeTotal) == null &&
-        rateOverrideValid
+    val canSave = if (selectedType == WorkDayType.WORK) {
+        workedTotal != null &&
+            workedTotal > 0 &&
+            overtimeTotal != null &&
+            WorkDayValidator.validate(selectedType, workedTotal, overtimeTotal) == null &&
+            rateOverrideValid
+    } else {
+        WorkDayValidator.validate(selectedType, 0, 0) == null
+    }
 
     val focusManager = LocalFocusManager.current
 
@@ -175,40 +189,50 @@ fun DayEditorContent(
             }
         }
 
-        DurationFields(
-            title = stringResource(R.string.worked),
-            tagPrefix = "worked",
-            hours = workedHours,
-            minutes = workedMinutes,
-            onHoursChanged = { workedHours = it.onlyDigits(maxLength = 2) },
-            onMinutesChanged = { workedMinutes = it.onlyDigits(maxLength = 2) },
-        )
-
-        WorkDurationPresets(
-            workedHours = workedHours,
-            workedMinutes = workedMinutes,
-            onPresetSelected = { hours ->
-                workedHours = hours.toString()
-                workedMinutes = ""
+        DayTypeSelector(
+            selectedType = selectedType,
+            onTypeSelected = { type ->
+                selectedTypeName = type.name
                 focusManager.clearFocus()
             },
         )
 
-        DurationFields(
-            title = stringResource(R.string.overtime),
-            tagPrefix = "overtime",
-            hours = overtimeHours,
-            minutes = overtimeMinutes,
-            onHoursChanged = { overtimeHours = it.onlyDigits(maxLength = 2) },
-            onMinutesChanged = { overtimeMinutes = it.onlyDigits(maxLength = 2) },
-        )
-
-        if (validationMessage != null) {
-            Text(
-                text = validationMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
+        if (selectedType == WorkDayType.WORK) {
+            DurationFields(
+                title = stringResource(R.string.worked),
+                tagPrefix = "worked",
+                hours = workedHours,
+                minutes = workedMinutes,
+                onHoursChanged = { workedHours = it.onlyDigits(maxLength = 2) },
+                onMinutesChanged = { workedMinutes = it.onlyDigits(maxLength = 2) },
             )
+
+            WorkDurationPresets(
+                workedHours = workedHours,
+                workedMinutes = workedMinutes,
+                onPresetSelected = { hours ->
+                    workedHours = hours.toString()
+                    workedMinutes = ""
+                    focusManager.clearFocus()
+                },
+            )
+
+            DurationFields(
+                title = stringResource(R.string.overtime),
+                tagPrefix = "overtime",
+                hours = overtimeHours,
+                minutes = overtimeMinutes,
+                onHoursChanged = { overtimeHours = it.onlyDigits(maxLength = 2) },
+                onMinutesChanged = { overtimeMinutes = it.onlyDigits(maxLength = 2) },
+            )
+
+            if (validationMessage != null) {
+                Text(
+                    text = validationMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
 
         if (noteExpanded) {
@@ -233,56 +257,59 @@ fun DayEditorContent(
             }
         }
 
-        if (rateOverrideExpanded) {
-            OutlinedTextField(
-                value = rateOverrideInput,
-                onValueChange = { value ->
-                    rateOverrideInput = value
-                        .filter { it.isDigit() || it == ',' || it == '.' }
-                        .take(16)
-                },
-                label = { Text(stringResource(R.string.day_rate_override)) },
-                suffix = { Text(currencyCode) },
-                singleLine = true,
-                isError = !rateOverrideValid,
-                supportingText = if (!rateOverrideValid) {
-                    { Text(stringResource(R.string.invalid_day_rate)) }
-                } else {
-                    null
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Decimal,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("day-editor-rate-override"),
-            )
-            TextButton(
-                onClick = {
-                    rateOverrideInput = ""
-                    rateOverrideExpanded = false
-                },
-                modifier = Modifier.testTag("day-editor-use-base-rate"),
-            ) {
-                Text(stringResource(R.string.use_base_rate))
-            }
-        } else {
-            TextButton(
-                onClick = { rateOverrideExpanded = true },
-                modifier = Modifier.testTag("day-editor-add-rate-override"),
-            ) {
-                Text(stringResource(R.string.add_day_rate_override))
+        if (selectedType == WorkDayType.WORK) {
+            if (rateOverrideExpanded) {
+                OutlinedTextField(
+                    value = rateOverrideInput,
+                    onValueChange = { value ->
+                        rateOverrideInput = value
+                            .filter { it.isDigit() || it == ',' || it == '.' }
+                            .take(16)
+                    },
+                    label = { Text(stringResource(R.string.day_rate_override)) },
+                    suffix = { Text(currencyCode) },
+                    singleLine = true,
+                    isError = !rateOverrideValid,
+                    supportingText = if (!rateOverrideValid) {
+                        { Text(stringResource(R.string.invalid_day_rate)) }
+                    } else {
+                        null
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("day-editor-rate-override"),
+                )
+                TextButton(
+                    onClick = {
+                        rateOverrideInput = ""
+                        rateOverrideExpanded = false
+                    },
+                    modifier = Modifier.testTag("day-editor-use-base-rate"),
+                ) {
+                    Text(stringResource(R.string.use_base_rate))
+                }
+            } else {
+                TextButton(
+                    onClick = { rateOverrideExpanded = true },
+                    modifier = Modifier.testTag("day-editor-add-rate-override"),
+                ) {
+                    Text(stringResource(R.string.add_day_rate_override))
+                }
             }
         }
 
         Button(
             onClick = {
-                val work = workedTotal ?: return@Button
-                val overtime = overtimeTotal ?: return@Button
+                val work = if (selectedType == WorkDayType.WORK) workedTotal ?: return@Button else 0
+                val overtime = if (selectedType == WorkDayType.WORK) overtimeTotal ?: return@Button else 0
+                val override = if (selectedType == WorkDayType.WORK) rateOverrideMinor else null
                 focusManager.clearFocus()
-                onSave(date, work, overtime, note, rateOverrideMinor)
+                onSave(date, selectedType, work, overtime, note, override)
             },
             enabled = canSave,
             modifier = Modifier
@@ -312,6 +339,37 @@ fun DayEditorContent(
         Spacer(modifier = Modifier.padding(bottom = 8.dp))
     }
 }
+
+@Composable
+private fun DayTypeSelector(
+    selectedType: WorkDayType,
+    onTypeSelected: (WorkDayType) -> Unit,
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        WorkDayType.entries.forEach { type ->
+            FilterChip(
+                selected = selectedType == type,
+                onClick = { onTypeSelected(type) },
+                label = { Text(dayTypeLabel(type)) },
+                modifier = Modifier.testTag("day-editor-type-${type.name.lowercase()}"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun dayTypeLabel(type: WorkDayType): String = stringResource(
+    when (type) {
+        WorkDayType.WORK -> R.string.day_type_work
+        WorkDayType.DAY_OFF -> R.string.day_type_day_off
+        WorkDayType.VACATION -> R.string.day_type_vacation
+        WorkDayType.SICK -> R.string.day_type_sick
+    },
+)
 
 @Composable
 private fun WorkDurationPresets(
