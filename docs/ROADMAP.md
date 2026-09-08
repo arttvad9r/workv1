@@ -118,7 +118,7 @@
 
 Only after core metrics/usability are stable:
 
-- [ ] app widget;
+- [x] app widget — Glance 1.2.0, read-only current-month summary with adaptive compact/expanded content and tap-through to the app;
 - [ ] quick-add action;
 - [ ] optional reminder;
 - [ ] calendar/date shortcuts;
@@ -145,7 +145,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью runtime-проверенная продуктовая ревизия после backup/restore gate: `ff76464df6a7aeaed3af72de933f77c52ffc8da5`. Документационный commit публикуется только после фактически зелёного CI этой ревизии.
+Последняя полностью runtime-проверенная продуктовая ревизия после app-widget gate: `e276ed946506655bcb103cf1e993262f17f154d6`. Документационный commit публикуется только после фактически зелёного CI этой ревизии.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -155,7 +155,7 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, export surfaces, PDF generation/validity, backup/restore against real Room + DataStore, destructive restore confirmation, accessibility основных поверхностей и доступность primary actions при font scale 200%.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, export surfaces, PDF generation/validity, backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, accessibility основных поверхностей и доступность primary actions при font scale 200%. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики.
 
 Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
