@@ -8,9 +8,10 @@ emulator_log="android17-emulator.log"
 emulator_bin="$ANDROID_SDK_ROOT/emulator/emulator"
 avd_home="${RUNNER_TEMP:-$PWD/.android-avd}"
 avd_path="$avd_home/$avd_name.avd"
+adb_key="$HOME/.android/adbkey"
 
 export ANDROID_AVD_HOME="$avd_home"
-mkdir -p "$ANDROID_AVD_HOME"
+mkdir -p "$ANDROID_AVD_HOME" "$HOME/.android"
 
 sdkmanager "emulator" "$system_image"
 echo no | avdmanager create avd \
@@ -19,6 +20,15 @@ echo no | avdmanager create avd \
   --package "$system_image" \
   --device "pixel_7" \
   --path "$avd_path"
+
+# Play Store images enforce ADB authentication. Create the host key before the
+# emulator starts so it can receive the public key during boot instead of
+# entering the unauthorized state.
+if [[ ! -f "$adb_key" ]]; then
+  adb keygen "$adb_key"
+fi
+chmod 600 "$adb_key"
+adb start-server >/dev/null
 
 # Fail early with useful diagnostics if avdmanager and emulator disagree about
 # where the AVD was created.
