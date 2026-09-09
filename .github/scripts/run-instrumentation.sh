@@ -49,18 +49,37 @@ if [[ "$status" -eq 0 && "$xml_has_tests" -ne 1 ]]; then
     echo "::error::Could not locate app and test APKs for direct instrumentation" | tee -a connected-android-test.log
     status=1
   else
-    adb uninstall "$test_package" >/dev/null 2>&1 || true
-    adb uninstall "$target_package" >/dev/null 2>&1 || true
+    app_install_status=0
+    test_install_status=0
 
-    adb install -r -t "$app_apk" 2>&1 | tee -a connected-android-test.log
-    app_install_status=${PIPESTATUS[0]}
-    adb install -r -t "$test_apk" 2>&1 | tee -a connected-android-test.log
-    test_install_status=${PIPESTATUS[0]}
+    # UTP normally leaves the just-built APKs installed even when it reports a
+    # zero-test XML. Reuse those exact installs when possible. Uninstalling and
+    # reinstalling both packages triggered Play Store/GMS package scans on the
+    # API 37.1 Play Store image, creating enough transient low-memory pressure
+    # for LMKD to kill the instrumentation process before the first test.
+    if adb shell pm path "$target_package" >/dev/null 2>&1; then
+      echo "Reusing UTP-installed target APK." | tee -a connected-android-test.log
+    else
+      adb install -r -t "$app_apk" 2>&1 | tee -a connected-android-test.log
+      app_install_status=${PIPESTATUS[0]}
+    fi
+
+    if adb shell pm path "$test_package" >/dev/null 2>&1; then
+      echo "Reusing UTP-installed test APK." | tee -a connected-android-test.log
+    else
+      adb install -r -t "$test_apk" 2>&1 | tee -a connected-android-test.log
+      test_install_status=${PIPESTATUS[0]}
+    fi
 
     if [[ "$app_install_status" -ne 0 || "$test_install_status" -ne 0 ]]; then
       echo "::error::Direct instrumentation APK installation failed" | tee -a connected-android-test.log
       status=1
     else
+      # Clear data without package removal so the fallback starts from a clean
+      # app/test state without producing PACKAGE_REMOVED/PACKAGE_ADDED churn.
+      adb shell pm clear "$test_package" >/dev/null 2>&1 || true
+      adb shell pm clear "$target_package" >/dev/null 2>&1 || true
+
       instrumentation_line="$(adb shell pm list instrumentation 2>&1 | tr -d '\r' | tee -a connected-android-test.log | grep "(target=${target_package})" | head -n 1)"
       component="${instrumentation_line#instrumentation:}"
       component="${component%% *}"
