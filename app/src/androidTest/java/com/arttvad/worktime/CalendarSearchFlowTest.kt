@@ -2,8 +2,8 @@ package com.arttvad.worktime
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.accessibility.enableAccessibilityChecks
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -22,6 +22,7 @@ import com.arttvad.worktime.domain.model.WorkDayType
 import java.time.YearMonth
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -102,7 +103,7 @@ class CalendarSearchFlowTest {
                     true
                 }.getOrDefault(false)
             }
-            onNodeWithTag(vacationResultTag).assertDoesNotExist()
+            assertTrue(onAllNodesWithTag(vacationResultTag).fetchSemanticsNodes().isEmpty())
 
             onNodeWithTag("calendar-search-query").performTextReplacement("")
             onNodeWithTag("calendar-search-filter-vacation")
@@ -115,7 +116,7 @@ class CalendarSearchFlowTest {
                     true
                 }.getOrDefault(false)
             }
-            onNodeWithTag(workResultTag).assertDoesNotExist()
+            assertTrue(onAllNodesWithTag(workResultTag).fetchSemanticsNodes().isEmpty())
 
             onNodeWithTag(vacationResultTag)
                 .performScrollTo()
