@@ -69,6 +69,23 @@ if [[ "$status" -eq 0 && "$xml_has_tests" -ne 1 ]]; then
         echo "::error::AndroidJUnitRunner instrumentation component is not registered" | tee -a connected-android-test.log
         status=1
       else
+        # Fresh installs on the Android 17 Play Store image trigger package and
+        # Play Store/GMS background work. Wait for broadcast delivery to settle,
+        # then reclaim cached processes before starting the test process. This
+        # avoids a pre-test LMKD kill under transient guest-memory pressure while
+        # keeping the test assertions and strict non-empty-suite gate unchanged.
+        echo "::group::Direct instrumentation memory preparation" | tee -a connected-android-test.log
+        adb shell grep -E 'MemTotal|MemAvailable|Cached' /proc/meminfo 2>&1 | tee -a connected-android-test.log || true
+        timeout 30s adb shell am wait-for-broadcast-idle --flush-broadcast-loopers 2>&1 | tee -a connected-android-test.log
+        broadcast_wait_status=${PIPESTATUS[0]}
+        if [[ "$broadcast_wait_status" -ne 0 ]]; then
+          echo "::warning::Broadcast-idle wait did not complete within 30 seconds; continuing with cached-process reclaim" | tee -a connected-android-test.log
+        fi
+        adb shell am kill-all 2>&1 | tee -a connected-android-test.log || true
+        sleep 2
+        adb shell grep -E 'MemTotal|MemAvailable|Cached' /proc/meminfo 2>&1 | tee -a connected-android-test.log || true
+        echo "::endgroup::" | tee -a connected-android-test.log
+
         # Keep a clean device log around the direct runner. The Android 17 Play
         # Store image produces substantial unrelated boot/package noise, which
         # previously hid an immediate instrumentation-process crash.
@@ -81,7 +98,7 @@ if [[ "$status" -eq 0 && "$xml_has_tests" -ne 1 ]]; then
           || ! grep -Eq 'OK \([1-9][0-9]* tests?\)' connected-android-test.log; then
           adb logcat -d -v threadtime > "$instrumentation_logcat" 2>&1 || true
           echo "::group::Direct instrumentation crash lines" | tee -a connected-android-test.log
-          grep -E 'AndroidRuntime|FATAL EXCEPTION|Fatal signal|DEBUG|crash_dump|AndroidJUnitRunner|TestRunner|com\.arttvad\.worktime|Process: com\.arttvad\.worktime' "$instrumentation_logcat" \
+          grep -E 'AndroidRuntime|FATAL EXCEPTION|Fatal signal|DEBUG|crash_dump|AndroidJUnitRunner|TestRunner|lowmemorykiller|lmkd|com\.arttvad\.worktime|Process: com\.arttvad\.worktime' "$instrumentation_logcat" \
             | tail -n 300 \
             | tee -a connected-android-test.log || true
           echo "::endgroup::" | tee -a connected-android-test.log
