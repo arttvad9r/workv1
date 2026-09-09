@@ -6,13 +6,27 @@ avd_name="worktime-api37"
 system_image="system-images;android-37.1;google_apis_playstore_ps16k;x86_64"
 emulator_log="android17-emulator.log"
 emulator_bin="$ANDROID_SDK_ROOT/emulator/emulator"
+avd_home="${RUNNER_TEMP:-$PWD/.android-avd}"
+avd_path="$avd_home/$avd_name.avd"
+
+export ANDROID_AVD_HOME="$avd_home"
+mkdir -p "$ANDROID_AVD_HOME"
 
 sdkmanager "emulator" "$system_image"
 echo no | avdmanager create avd \
   --force \
   --name "$avd_name" \
   --package "$system_image" \
-  --device "pixel_7"
+  --device "pixel_7" \
+  --path "$avd_path"
+
+# Fail early with useful diagnostics if avdmanager and emulator disagree about
+# where the AVD was created.
+if ! "$emulator_bin" -list-avds | grep -Fxq "$avd_name"; then
+  echo "::error::Android 17 AVD was created but is not visible to emulator"
+  find "$ANDROID_AVD_HOME" -maxdepth 2 -type f -print || true
+  exit 1
+fi
 
 nohup "$emulator_bin" \
   -avd "$avd_name" \
