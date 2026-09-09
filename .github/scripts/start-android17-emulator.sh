@@ -5,6 +5,7 @@ set -euo pipefail
 avd_name="worktime-api37"
 system_image="system-images;android-37.1;google_apis_playstore_ps16k;x86_64"
 emulator_log="android17-emulator.log"
+emulator_bin="$ANDROID_SDK_ROOT/emulator/emulator"
 
 sdkmanager "emulator" "$system_image"
 echo no | avdmanager create avd \
@@ -13,7 +14,7 @@ echo no | avdmanager create avd \
   --package "$system_image" \
   --device "pixel_7"
 
-nohup emulator \
+nohup "$emulator_bin" \
   -avd "$avd_name" \
   -no-window \
   -gpu swiftshader_indirect \
