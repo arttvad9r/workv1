@@ -140,6 +140,12 @@ class WorkTimeFlowTest {
                 }
                 onNodeWithTag("day-editor-worked-hours").performTextInput("8")
                 onNodeWithTag("day-editor-add-rate-override").performScrollTo().performClick()
+                waitUntil(timeoutMillis = 5_000) {
+                    runCatching {
+                        onNodeWithTag("day-editor-rate-override").assertExists()
+                        true
+                    }.getOrDefault(false)
+                }
                 onNodeWithTag("day-editor-rate-override").performScrollTo().performTextInput("20")
                 onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
