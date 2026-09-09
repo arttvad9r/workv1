@@ -29,7 +29,7 @@ class WorkTimeDatabaseMigrationTest {
     }
 
     @Test
-    fun migration1To4PreservesRowsAndAssignsLegacyDataToDefaultProfile() {
+    fun migration1To5PreservesRowsAndAssignsLegacyDataToDefaultProfile() {
         val databaseFile = context.getDatabasePath(DatabaseName)
         databaseFile.parentFile?.mkdirs()
 
@@ -66,6 +66,7 @@ class WorkTimeDatabaseMigrationTest {
                 WorkTimeDatabase.MIGRATION_1_2,
                 WorkTimeDatabase.MIGRATION_2_3,
                 WorkTimeDatabase.MIGRATION_3_4,
+                WorkTimeDatabase.MIGRATION_4_5,
             )
             .build()
 
@@ -90,6 +91,8 @@ class WorkTimeDatabaseMigrationTest {
             assertEquals("WORK", migrated.dayType)
             assertEquals(DEFAULT_PROFILE_NAME, profile?.name)
             assertEquals(0L, profile?.createdAtEpochMillis)
+            assertNull(profile?.hourlyRateMinor)
+            assertNull(profile?.currencyCode)
         } finally {
             database.close()
         }
