@@ -9,6 +9,7 @@ import androidx.compose.ui.test.v2.runEmptyComposeUiTest
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.pressBack
+import androidx.test.espresso.Espresso.pressBackUnconditionally
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import java.time.YearMonth
@@ -75,7 +76,7 @@ class SystemBackFlowTest {
                 }.getOrDefault(false)
             }
 
-            pressBack()
+            pressBackUnconditionally()
             waitUntil(timeoutMillis = 5_000) {
                 scenario.state == Lifecycle.State.DESTROYED
             }
