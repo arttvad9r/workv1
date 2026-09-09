@@ -2,6 +2,9 @@
 
 set +e
 
+instrumentation_logcat="android-instrumentation-logcat.log"
+rm -f "$instrumentation_logcat"
+
 package_ready=0
 for attempt in $(seq 1 60); do
   if adb shell cmd package path android >/dev/null 2>&1; then
@@ -66,12 +69,22 @@ if [[ "$status" -eq 0 && "$xml_has_tests" -ne 1 ]]; then
         echo "::error::AndroidJUnitRunner instrumentation component is not registered" | tee -a connected-android-test.log
         status=1
       else
+        # Keep a clean device log around the direct runner. The Android 17 Play
+        # Store image produces substantial unrelated boot/package noise, which
+        # previously hid an immediate instrumentation-process crash.
+        adb logcat -c >/dev/null 2>&1 || true
         adb shell am instrument -w -r "$component" 2>&1 | tee -a connected-android-test.log
         direct_status=${PIPESTATUS[0]}
 
         if [[ "$direct_status" -ne 0 ]] \
           || grep -Eq 'FAILURES!!!|INSTRUMENTATION_FAILED|Process crashed' connected-android-test.log \
           || ! grep -Eq 'OK \([1-9][0-9]* tests?\)' connected-android-test.log; then
+          adb logcat -d -v threadtime > "$instrumentation_logcat" 2>&1 || true
+          echo "::group::Direct instrumentation crash lines" | tee -a connected-android-test.log
+          grep -E 'AndroidRuntime|FATAL EXCEPTION|Fatal signal|DEBUG|crash_dump|AndroidJUnitRunner|TestRunner|com\.arttvad\.worktime|Process: com\.arttvad\.worktime' "$instrumentation_logcat" \
+            | tail -n 300 \
+            | tee -a connected-android-test.log || true
+          echo "::endgroup::" | tee -a connected-android-test.log
           echo "::error::Direct Android instrumentation did not complete a non-empty passing suite" | tee -a connected-android-test.log
           status=1
         else
@@ -94,7 +107,11 @@ if [[ "$status" -ne 0 ]]; then
   echo "::endgroup::"
   echo "::group::Device instrumentation diagnostics"
   adb shell pm list instrumentation || true
-  adb logcat -d -v threadtime | tail -n 500 || true
+  if [[ -f "$instrumentation_logcat" ]]; then
+    tail -n 500 "$instrumentation_logcat" || true
+  else
+    adb logcat -d -v threadtime | tail -n 500 || true
+  fi
   echo "::endgroup::"
 fi
 
