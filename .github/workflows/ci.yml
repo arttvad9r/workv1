@@ -57,7 +57,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [36, "37.1"]
+        include:
+          - api-level: 36
+            target: google_apis
+          - api-level: "37.1"
+            target: playstore_ps16k
 
     steps:
       - name: Checkout
@@ -91,7 +95,7 @@ jobs:
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ matrix.api-level }}
-          target: google_apis
+          target: ${{ matrix.target }}
           arch: x86_64
           profile: pixel_7
           disable-animations: true
