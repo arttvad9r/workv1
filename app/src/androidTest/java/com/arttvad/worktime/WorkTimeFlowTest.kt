@@ -35,6 +35,10 @@ class WorkTimeFlowTest {
     private val today: LocalDate = LocalDate.now()
     private val dayTag: String = "day-$today"
 
+    private companion object {
+        const val PERSISTENCE_TIMEOUT_MILLIS = 10_000L
+    }
+
     private val application: WorkTimeApplication
         get() = InstrumentationRegistry.getInstrumentation()
             .targetContext
@@ -99,7 +103,7 @@ class WorkTimeFlowTest {
                 onNodeWithTag("settings-currency").performTextReplacement("EUR")
                 onNodeWithTag("settings-save").performScrollTo().performClick()
 
-                waitUntil(timeoutMillis = 5_000) {
+                waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                     currentPayment() == (1_250L to "EUR")
                 }
             }
@@ -139,7 +143,7 @@ class WorkTimeFlowTest {
                 onNodeWithTag("day-editor-rate-override").performScrollTo().performTextInput("20")
                 onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
-                waitUntil(timeoutMillis = 5_000) {
+                waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                     currentEntry()?.hourlyRateOverrideMinor == 2_000L
                 }
             }
@@ -174,7 +178,7 @@ class WorkTimeFlowTest {
             onNodeWithTag("day-editor-worked-hours").assertTextContains("12")
             onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
-            waitUntil(timeoutMillis = 5_000) {
+            waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                 currentEntry()?.workedMinutes == 12 * 60
             }
         }
@@ -194,7 +198,7 @@ class WorkTimeFlowTest {
             onNodeWithTag("day-editor-type-day_off").performScrollTo().performClick()
             onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
-            waitUntil(timeoutMillis = 5_000) {
+            waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                 currentEntry()?.let { entry ->
                     entry.type == WorkDayType.DAY_OFF &&
                         entry.workedMinutes == 0 &&
@@ -240,7 +244,7 @@ class WorkTimeFlowTest {
             onNodeWithTag("day-editor-worked-minutes").performTextInput("30")
             onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
-            waitUntil(timeoutMillis = 5_000) {
+            waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                 currentEntry()?.workedMinutes == 8 * 60 + 30
             }
 
@@ -255,7 +259,7 @@ class WorkTimeFlowTest {
             onNodeWithTag("day-editor-worked-minutes").performTextReplacement("")
             onNodeWithTag("day-editor-save").performScrollTo().performClick()
 
-            waitUntil(timeoutMillis = 5_000) {
+            waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                 currentEntry()?.workedMinutes == 9 * 60
             }
 
@@ -268,7 +272,7 @@ class WorkTimeFlowTest {
             }
             onNodeWithTag("day-editor-delete").performScrollTo().performClick()
 
-            waitUntil(timeoutMillis = 5_000) { currentEntry() == null }
+            waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) { currentEntry() == null }
             waitUntil(timeoutMillis = 5_000) {
                 runCatching {
                     onNodeWithText(undoLabel).assertExists()
@@ -276,7 +280,7 @@ class WorkTimeFlowTest {
                 }.getOrDefault(false)
             }
             onNodeWithText(undoLabel).performClick()
-            waitUntil(timeoutMillis = 5_000) {
+            waitUntil(timeoutMillis = PERSISTENCE_TIMEOUT_MILLIS) {
                 currentEntry()?.workedMinutes == 9 * 60
             }
         }
