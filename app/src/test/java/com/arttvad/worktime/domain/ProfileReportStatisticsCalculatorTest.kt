@@ -68,6 +68,36 @@ class ProfileReportStatisticsCalculatorTest {
     }
 
     @Test
+    fun sameCurrencyProfilesAreSummedIntoOneTotal() {
+        val reports = listOf(
+            report(
+                id = 1L,
+                name = "A",
+                currency = "EUR",
+                month = DetailedMonthStatistics(
+                    workDays = 1,
+                    workedMinutes = 480,
+                    earningsMinor = 10_000L,
+                ),
+            ),
+            report(
+                id = 2L,
+                name = "B",
+                currency = "EUR",
+                month = DetailedMonthStatistics(
+                    workDays = 1,
+                    workedMinutes = 360,
+                    earningsMinor = 7_500L,
+                ),
+            ),
+        )
+
+        val earnings = ProfileReportStatisticsCalculator.combineMonth(reports).earningsByCurrency
+
+        assertEquals(listOf(CurrencyEarningsStatistics("EUR", 17_500L)), earnings)
+    }
+
+    @Test
     fun missingRateMakesOnlyItsCurrencyGroupUnknown() {
         val reports = listOf(
             report(
