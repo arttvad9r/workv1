@@ -40,6 +40,7 @@ fi
 
 nohup "$emulator_bin" \
   -avd "$avd_name" \
+  -memory 3072 \
   -no-window \
   -gpu swiftshader_indirect \
   -no-snapshot \
@@ -75,3 +76,34 @@ adb shell input keyevent 82 || true
 adb shell settings put global window_animation_scale 0.0
 adb shell settings put global transition_animation_scale 0.0
 adb shell settings put global animator_duration_scale 0.0
+
+# The only currently usable API 37.1 16 KB x86_64 image is Play Store based.
+# Its first-boot Play Store/GMS provisioning can create severe zone-level memory
+# pressure even when /proc/meminfo reports gigabytes available. Compatibility
+# tests are intentionally offline and do not exercise Google consumer apps, so
+# quiesce that unrelated activity before installing/running the app under test.
+if ! adb shell cmd connectivity airplane-mode enable >/dev/null 2>&1; then
+  adb shell settings put global airplane_mode_on 1 || true
+  adb shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true >/dev/null 2>&1 || true
+fi
+
+for package_name in \
+  com.android.vending \
+  com.google.android.apps.photos \
+  com.google.android.apps.wellbeing; do
+  if adb shell pm path "$package_name" >/dev/null 2>&1; then
+    adb shell pm disable-user --user 0 "$package_name" >/dev/null 2>&1 || true
+    adb shell am force-stop "$package_name" >/dev/null 2>&1 || true
+  fi
+done
+
+# GMS is part of the system image and may be needed by framework components, so
+# do not disable it. Force-stop only its current first-boot work and allow the
+# system to restart whatever it actually requires.
+adb shell am force-stop com.google.android.gms >/dev/null 2>&1 || true
+
+if ! timeout 45s adb shell am wait-for-broadcast-idle --flush-broadcast-loopers; then
+  echo "::warning::Android 17 first-boot broadcasts did not fully settle within 45 seconds"
+fi
+adb shell am kill-all >/dev/null 2>&1 || true
+sleep 3
