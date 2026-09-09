@@ -1,6 +1,6 @@
 # WorkTime — implementation roadmap
 
-**Дата:** 2026-09-08
+**Дата:** 2026-09-09
 
 ## Definition of Done
 
@@ -149,7 +149,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью runtime-проверенная продуктовая ревизия до текущего Phase 6 feature branch: `e4e006a8b941e54f4d3a2a61c2537cf2834db814`. Текущий feature branch считается готовым к переносу этого маркера только после полного зелёного Android CI, включая API 36 instrumentation.
+Phase 6 перенесён в `main`. Текущий release/runtime marker больше не привязан к вручную записанному commit SHA: ревизия считается runtime-проверенной только после полного зелёного обязательного Android CI на её фактическом head commit.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -157,11 +157,14 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `lintDebug`;
 - `assembleDebug`;
 - `assembleDebugAndroidTest`;
-- `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
+- `connectedDebugAndroidTest` на Android API 36 x86_64 emulator;
+- отдельную Android 17 compatibility suite на API 37.1 `google_apis_playstore_ps16k` x86_64 с 16 KB page-size image.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, profile isolation/switching/per-profile payment, month/year statistics и combined profile reports, export surfaces, PDF generation/validity, multi-profile backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, persisted shift timer start/relaunch/stop flow, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog, timer controls и combined reports. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания; timer JVM tests проверяют расчёт целых минут и границы существующей модели длительности.
+Instrumentation gate сначала запускает обычный `connectedDebugAndroidTest`. Он не принимает `BUILD SUCCESSFUL` как достаточное доказательство: Package Manager должен быть готов, `AndroidTestRunner failed` считается ошибкой, а результат должен содержать реально выполненные тесты. На Android 17 API 37.1 текущий AGP/UTP path может вернуть zero-test XML при успешном Gradle exit; в этом случае CI переустанавливает те же собранные app/test APK и запускает зарегистрированный `AndroidJUnitRunner` через `adb shell am instrument`. Gate проходит только при непустом успешном результате `OK (N tests)`, где `N > 0`, и сохраняет Gradle log, instrumentation XML и emulator diagnostics как artifacts. Проверочный Android 17 run после исправления test stack завершил 42 теста успешно.
 
-Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, profile isolation/switching/per-profile payment, month/year statistics и combined profile reports, export surfaces, PDF generation/validity, multi-profile backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, persisted shift timer start/relaunch/stop flow, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog, timer controls и combined reports. Та же runtime suite используется для Android 17 compatibility. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания; timer JVM tests проверяют расчёт целых минут и границы существующей модели длительности.
+
+AndroidX Espresso явно закреплён на 3.7.0 для Android 17-compatible input injection. Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`, а Android 17 AVD создаётся из официального API 37.1 16 KB Play Store system image с явной ADB-auth/readiness проверкой до запуска tests. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
 Официальный Compose Preview Screenshot Testing остаётся experimental; visual golden tests не включаются в стабильный gate, пока tooling не станет достаточно предсказуемым для проекта.
 
