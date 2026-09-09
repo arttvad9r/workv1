@@ -68,14 +68,14 @@
 - [x] configuration recreation keeps visible month/editor draft — verified on API 36 emulator;
 - [x] invalid overtime cannot be saved;
 - [x] persistence failure has user-safe error path;
-- [x] Room schema migrations `1 -> 2 -> 3` preserve existing rows, add nullable day-rate override and default legacy rows to `WORK`.
+- [x] Room schema migrations `1 -> 2 -> 3 -> 4 -> 5` preserve legacy rows, add nullable day-rate override/day type, move records to profile-scoped composite keys and add per-profile payment fields; migration paths are covered by instrumentation tests.
 
 ## Phase 2 — Settings + polished core
 
 - [x] secondary payment settings surface without unnecessary navigation hierarchy;
 - [x] default hourly rate;
 - [x] currency;
-- [x] settings persistence across Activity relaunch verified against real DataStore;
+- [x] settings persistence across Activity relaunch verified against real DataStore/Room profile storage;
 - [x] actual earnings in summary;
 - [x] optional day rate override with persistence and deterministic mixed-rate month calculation;
 - [x] Navigation 3 applicability reviewed — deliberately not introduced while the app has one root destination plus modal surfaces; revisit when a real destination stack exists;
@@ -106,7 +106,8 @@
 - [x] XLSX month export — dependency-free production OOXML writer, opened and validated by Apache POI 5.5.1 in JVM tests only;
 - [x] PDF month report — one-page A4 report generated with platform `PdfDocument` and validated with `PdfRenderer`;
 - [ ] complete Android share/document-provider verification — exports and backup use Activity Result document contracts, but manual round-trip through representative external document providers is still pending;
-- [x] versioned full backup/restore of WorkDay records + base rate/currency through the system document picker;
+- [x] versioned full backup/restore of all work profiles, WorkDay records, active profile and payment settings through the system document picker;
+- [x] backup decoder remains backward-compatible with WTBK v1/v2; encoder writes current WTBK v3 with optional per-profile payment;
 - [x] restore validates the entire backup before mutation and requires explicit destructive confirmation;
 - [x] Room bulk replacement is transactional; cross-store runtime failure uses compensating rollback for Room + DataStore snapshots;
 - [x] deterministic backup codec/compatibility tests, invalid-format rejection and rollback tests;
@@ -126,11 +127,14 @@ Only after core metrics/usability are stable:
 
 ## Phase 6 — Multiple work profiles
 
-- [ ] schema migration to profile/workplace entity;
-- [ ] profile switching without cluttering day entry;
-- [ ] independent rates/currency where sensible;
-- [ ] combined vs per-profile reports;
-- [ ] migration tests from single-profile database.
+- [x] schema migration to profile/workplace entity;
+- [x] profile switching without cluttering day entry;
+- [x] independent rates/currency where sensible;
+- [x] combined vs per-profile month/year reports with currency-separated earnings;
+- [x] migration tests from single-profile database;
+- [x] backup/restore preserves all profiles, active selection and per-profile payment while reading legacy single-profile backups.
+
+Combined reports deliberately aggregate time/day counters across profiles but never add amounts from different currencies into one number. Existing CSV/XLSX/PDF exports remain scoped to the selected profile to keep exported money semantics unambiguous.
 
 ## Phase 7 — Optional sync
 
@@ -145,7 +149,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Последняя полностью runtime-проверенная продуктовая ревизия после timer/check-in/out gate: `e4e006a8b941e54f4d3a2a61c2537cf2834db814`.
+Последняя полностью runtime-проверенная продуктовая ревизия до текущего Phase 6 feature branch: `e4e006a8b941e54f4d3a2a61c2537cf2834db814`. Текущий feature branch считается готовым к переносу этого маркера только после полного зелёного Android CI, включая API 36 instrumentation.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -155,7 +159,7 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `assembleDebugAndroidTest`;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, month/year statistics, export surfaces, PDF generation/validity, backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, persisted shift timer start/relaunch/stop flow, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog и timer controls. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания; timer JVM tests проверяют расчёт целых минут и границы существующей модели длительности.
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, profile isolation/switching/per-profile payment, month/year statistics и combined profile reports, export surfaces, PDF generation/validity, multi-profile backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, persisted shift timer start/relaunch/stop flow, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog, timer controls и combined reports. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания; timer JVM tests проверяют расчёт целых минут и границы существующей модели длительности.
 
 Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, а compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`. Успешный build публикует debug APK как CI artifact с ограниченным retention.
 
@@ -164,8 +168,8 @@ Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA
 ## Explicitly deferred
 
 - strict cross-store crash-atomic restore journal (current Room + DataStore runtime failures use compensating rollback);
-- reminder settings are device-specific and intentionally excluded from WTBK v1 so restore cannot silently re-enable notifications on another device;
-- active shift timer state is device-specific and intentionally excluded from WTBK v1;
+- reminder settings are device-specific and intentionally excluded from WTBK v3 so restore cannot silently re-enable notifications on another device;
+- active shift timer state is device-specific and intentionally excluded from WTBK v3;
 - employer/team SaaS;
 - invoices;
 - geofencing;
