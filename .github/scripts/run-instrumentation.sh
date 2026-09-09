@@ -75,7 +75,7 @@ if [[ "$status" -eq 0 && "$xml_has_tests" -ne 1 ]]; then
         # avoids a pre-test LMKD kill under transient guest-memory pressure while
         # keeping the test assertions and strict non-empty-suite gate unchanged.
         echo "::group::Direct instrumentation memory preparation" | tee -a connected-android-test.log
-        adb shell grep -E 'MemTotal|MemAvailable|Cached' /proc/meminfo 2>&1 | tee -a connected-android-test.log || true
+        adb shell cat /proc/meminfo 2>&1 | grep -E '^(MemTotal|MemAvailable|Cached):' | tee -a connected-android-test.log || true
         timeout 30s adb shell am wait-for-broadcast-idle --flush-broadcast-loopers 2>&1 | tee -a connected-android-test.log
         broadcast_wait_status=${PIPESTATUS[0]}
         if [[ "$broadcast_wait_status" -ne 0 ]]; then
@@ -83,7 +83,7 @@ if [[ "$status" -eq 0 && "$xml_has_tests" -ne 1 ]]; then
         fi
         adb shell am kill-all 2>&1 | tee -a connected-android-test.log || true
         sleep 2
-        adb shell grep -E 'MemTotal|MemAvailable|Cached' /proc/meminfo 2>&1 | tee -a connected-android-test.log || true
+        adb shell cat /proc/meminfo 2>&1 | grep -E '^(MemTotal|MemAvailable|Cached):' | tee -a connected-android-test.log || true
         echo "::endgroup::" | tee -a connected-android-test.log
 
         # Keep a clean device log around the direct runner. The Android 17 Play
