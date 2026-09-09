@@ -9,6 +9,7 @@
 Проект находится в активной разработке. Рабочий offline-first срез уже включает:
 
 - календарь месяца, горизонтальную навигацию и быстрый ввод по дню;
+- поиск существующих записей текущего месяца по тексту заметки и фильтры по типу дня с открытием найденной записи в существующем day editor;
 - типы дня: работа, выходной, отпуск и больничный;
 - пресеты смен 8/10/12 часов и ручной ввод;
 - альтернативный расчёт длительности по началу, окончанию и перерыву, включая ночные смены;
@@ -26,8 +27,8 @@
 - backward-compatible чтение backup versions v1/v2 и текущий WTBK v3;
 - отсутствие broad storage permissions для экспортных и backup flows;
 - adaptive Compose UI, edge-to-edge и светлую/тёмную системную тему;
-- автоматические accessibility checks и проверки font scale 200% для критических поверхностей;
-- build/unit/lint CI, release AAB smoke через `bundleRelease` и runtime instrumentation на Android API 36 и Android 17 API 37.1 с 16 KB page-size image;
+- автоматические accessibility checks и проверки font scale 200% для критических поверхностей, включая calendar search/filter;
+- build/unit/lint CI, последовательный release AAB smoke через `bundleRelease` и runtime instrumentation на Android API 36 и Android 17 API 37.1 с 16 KB page-size image;
 - устанавливаемый debug APK как artifact каждого успешного CI build.
 
 ## Документация
@@ -55,7 +56,8 @@
 Проект использует repository Gradle Wrapper 9.6.1:
 
 ```bash
-./gradlew testDebugUnitTest lintDebug assembleDebug bundleRelease
+./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+./gradlew bundleRelease
 ```
 
 Debug APK после локальной сборки:
@@ -64,7 +66,7 @@ Debug APK после локальной сборки:
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Release AAB smoke формируется без release signing и используется CI только для проверки production-like R8/resource shrinking path:
+Release AAB smoke формируется без release signing и используется CI только для проверки production-like R8/resource shrinking path. Debug/unit/lint/androidTest и release bundle запускаются последовательно, чтобы разные Room/KSP variants не писали один schema export одновременно:
 
 ```text
 app/build/outputs/bundle/release/app-release.aab
@@ -80,4 +82,4 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Android target
 
-Проект ориентируется на актуальный Android-стек 2026 года: Kotlin, Jetpack Compose, Material 3/design system, UDF, Room и DataStore. Текущий baseline: `compileSdk 37`, `targetSdk 36`, `minSdk 26`, JDK 17, AGP 9.4 и Gradle 9.6.1. Build gate дополнительно выполняет `bundleRelease`, чтобы production-like R8/resource shrinking path проверялся на каждом PR/push. Runtime gate выполняет instrumentation на Android API 36 x86_64 и отдельную compatibility suite на Android 17 API 37.1 `google_apis_playstore_ps16k` x86_64; Android 17 проверяется без преждевременного повышения `targetSdk` выше 36.
+Проект ориентируется на актуальный Android-стек 2026 года: Kotlin, Jetpack Compose, Material 3/design system, UDF, Room и DataStore. Текущий baseline: `compileSdk 37`, `targetSdk 36`, `minSdk 26`, JDK 17, AGP 9.4 и Gradle 9.6.1. Build gate выполняет debug/unit/lint/androidTest assembly и затем отдельным последовательным вызовом `bundleRelease`, чтобы production-like R8/resource shrinking path проверялся на каждом PR/push без конкурентной записи Room schema. Runtime gate выполняет instrumentation на Android API 36 x86_64 и отдельную compatibility suite на Android 17 API 37.1 `google_apis_playstore_ps16k` x86_64; Android 17 проверяется без преждевременного повышения `targetSdk` выше 36.

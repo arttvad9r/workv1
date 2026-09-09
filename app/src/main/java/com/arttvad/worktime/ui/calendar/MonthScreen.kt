@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventRepeat
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.AlertDialog
@@ -90,6 +91,7 @@ fun WorkTimeScreen(
     var paymentSettingsOpen by rememberSaveable { mutableStateOf(false) }
     var profileSwitcherOpen by rememberSaveable { mutableStateOf(false) }
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     var statisticsOpen by rememberSaveable { mutableStateOf(false) }
     var restoreConfirmationOpen by rememberSaveable { mutableStateOf(false) }
     var pendingCsv by rememberSaveable { mutableStateOf<String?>(null) }
@@ -253,6 +255,15 @@ fun WorkTimeScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { searchOpen = true },
+                        modifier = Modifier.testTag("calendar-search-open"),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = stringResource(R.string.calendar_search_open),
+                        )
+                    }
                     IconButton(onClick = { patternGeneratorOpen = true }) {
                         Icon(
                             imageVector = Icons.Outlined.EventRepeat,
@@ -304,6 +315,18 @@ fun WorkTimeScreen(
                 }
             }
         }
+    }
+
+    if (searchOpen) {
+        CalendarSearchSheet(
+            month = uiState.visibleMonth,
+            entries = uiState.entries.values,
+            onDismiss = { searchOpen = false },
+            onSelectDay = { date ->
+                searchOpen = false
+                onDaySelected(date)
+            },
+        )
     }
 
     if (profileSwitcherOpen) {

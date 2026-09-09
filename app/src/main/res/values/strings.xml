@@ -2,6 +2,17 @@
 <resources>
     <string name="app_name">Рабочее время</string>
     <string name="settings">Настройки</string>
+    <string name="calendar_search_open">Поиск и фильтр</string>
+    <string name="calendar_search_title">Поиск записей</string>
+    <string name="calendar_search_scope">Записи за %1$s</string>
+    <string name="calendar_search_query">Поиск по заметке</string>
+    <string name="calendar_search_query_hint">Например, командировка</string>
+    <string name="calendar_search_clear">Очистить поиск</string>
+    <string name="calendar_search_filter_all">Все</string>
+    <string name="calendar_search_results_count">Найдено: %1$d</string>
+    <string name="calendar_search_empty_month">В этом месяце пока нет записей</string>
+    <string name="calendar_search_no_results">По заданным условиям ничего не найдено</string>
+    <string name="calendar_search_work_detail">Работа · %1$s</string>
     <string name="previous_month">Предыдущий месяц</string>
     <string name="next_month">Следующий месяц</string>
     <string name="today">Сегодня</string>
