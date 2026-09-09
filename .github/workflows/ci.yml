@@ -93,6 +93,17 @@ jobs:
           disable-animations: true
           script: bash .github/scripts/run-instrumentation.sh
 
+      - name: Upload API 36 instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: instrumentation-api36-${{ github.sha }}
+          path: |
+            connected-android-test.log
+            app/build/**/androidTest-results/**/*.xml
+          if-no-files-found: warn
+          retention-days: 14
+
   android17-compatibility:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -130,6 +141,18 @@ jobs:
 
       - name: Run Android 17 instrumentation tests
         run: bash .github/scripts/run-instrumentation.sh
+
+      - name: Upload Android 17 instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: instrumentation-android17-${{ github.sha }}
+          path: |
+            connected-android-test.log
+            app/build/**/androidTest-results/**/*.xml
+            android17-emulator.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Stop Android 17 emulator
         if: always()
