@@ -27,7 +27,7 @@
 - отсутствие broad storage permissions для экспортных и backup flows;
 - adaptive Compose UI, edge-to-edge и светлую/тёмную системную тему;
 - автоматические accessibility checks и проверки font scale 200% для критических поверхностей;
-- build/unit/lint CI и runtime instrumentation на Android API 36 и Android 17 API 37.1 с 16 KB page-size image;
+- build/unit/lint CI, release AAB smoke через `bundleRelease` и runtime instrumentation на Android API 36 и Android 17 API 37.1 с 16 KB page-size image;
 - устанавливаемый debug APK как artifact каждого успешного CI build.
 
 ## Документация
@@ -55,13 +55,19 @@
 Проект использует repository Gradle Wrapper 9.6.1:
 
 ```bash
-./gradlew testDebugUnitTest lintDebug assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug bundleRelease
 ```
 
 Debug APK после локальной сборки:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
+```
+
+Release AAB smoke формируется без release signing и используется CI только для проверки production-like R8/resource shrinking path:
+
+```text
+app/build/outputs/bundle/release/app-release.aab
 ```
 
 Установка через ADB:
@@ -74,4 +80,4 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Android target
 
-Проект ориентируется на актуальный Android-стек 2026 года: Kotlin, Jetpack Compose, Material 3/design system, UDF, Room и DataStore. Текущий baseline: `compileSdk 37`, `targetSdk 36`, `minSdk 26`, JDK 17, AGP 9.4 и Gradle 9.6.1. Runtime gate выполняет instrumentation на Android API 36 x86_64 и отдельную compatibility suite на Android 17 API 37.1 `google_apis_playstore_ps16k` x86_64; Android 17 проверяется без преждевременного повышения `targetSdk` выше 36.
+Проект ориентируется на актуальный Android-стек 2026 года: Kotlin, Jetpack Compose, Material 3/design system, UDF, Room и DataStore. Текущий baseline: `compileSdk 37`, `targetSdk 36`, `minSdk 26`, JDK 17, AGP 9.4 и Gradle 9.6.1. Build gate дополнительно выполняет `bundleRelease`, чтобы production-like R8/resource shrinking path проверялся на каждом PR/push. Runtime gate выполняет instrumentation на Android API 36 x86_64 и отдельную compatibility suite на Android 17 API 37.1 `google_apis_playstore_ps16k` x86_64; Android 17 проверяется без преждевременного повышения `targetSdk` выше 36.
