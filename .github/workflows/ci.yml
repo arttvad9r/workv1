@@ -40,8 +40,11 @@ jobs:
       - name: Set up Gradle caching
         uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
 
-      - name: Unit tests, lint and debug/release builds
-        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest bundleRelease --stacktrace
+      - name: Unit tests, lint and debug builds
+        run: ./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest --stacktrace
+
+      - name: Release bundle smoke
+        run: ./gradlew bundleRelease --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
