@@ -7,6 +7,7 @@ import com.arttvad.worktime.data.preferences.WorkPreferences
 import com.arttvad.worktime.data.preferences.WorkPreferencesRepository
 import com.arttvad.worktime.data.repository.ProfileBackupRepository
 import com.arttvad.worktime.data.repository.WorkDayRepository
+import com.arttvad.worktime.data.repository.WorkProfileRepository
 import com.arttvad.worktime.domain.backup.BackupPayment
 import com.arttvad.worktime.domain.backup.BackupRestoreCoordinator
 import com.arttvad.worktime.domain.backup.BackupSettings
@@ -20,6 +21,7 @@ import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
+import com.arttvad.worktime.domain.model.effectivePayment
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import java.io.InputStream
 import java.io.OutputStream
@@ -74,6 +76,7 @@ class CalendarViewModel(
     private val workDayRepository: WorkDayRepository,
     private val preferencesRepository: WorkPreferencesRepository,
     private val profileBackupRepository: ProfileBackupRepository,
+    private val workProfileRepository: WorkProfileRepository,
 ) : ViewModel() {
     private val visibleMonth = MutableStateFlow(YearMonth.now())
     private val selectedDate = MutableStateFlow<LocalDate?>(null)
@@ -123,6 +126,12 @@ class CalendarViewModel(
                 }
         }
 
+    private val profiles = workProfileRepository.observeProfiles()
+        .catch {
+            mutableEvents.emit(CalendarEvent.DataError)
+            emit(emptyList())
+        }
+
     private val periodData = combine(
         visibleMonth,
         monthEntries,
@@ -135,22 +144,34 @@ class CalendarViewModel(
         periodData,
         preferencesRepository.preferences,
         selectedDate,
-    ) { data, preferences, selected ->
+        profiles,
+    ) { data, preferences, selected, workProfiles ->
+        val activeProfile = workProfiles.firstOrNull { profile ->
+            profile.id == preferences.activeProfileId
+        }
+        val payment = activeProfile.effectivePayment(
+            fallbackHourlyRateMinor = preferences.hourlyRateMinor,
+            fallbackCurrencyCode = preferences.currencyCode,
+        )
+        val effectivePreferences = preferences.copy(
+            hourlyRateMinor = payment.hourlyRateMinor,
+            currencyCode = payment.currencyCode,
+        )
         CalendarUiState(
             visibleMonth = data.month,
             entries = data.monthDays.associateBy(WorkDay::date),
             selectedDate = selected,
-            summary = MonthSummaryCalculator.calculate(data.monthDays, preferences.hourlyRateMinor),
+            summary = MonthSummaryCalculator.calculate(data.monthDays, payment.hourlyRateMinor),
             detailedStatistics = DetailedMonthStatisticsCalculator.calculate(
                 data.monthDays,
-                preferences.hourlyRateMinor,
+                payment.hourlyRateMinor,
             ),
             detailedYearStatistics = DetailedYearStatisticsCalculator.calculate(
                 Year.of(data.month.year),
                 data.yearDays,
-                preferences.hourlyRateMinor,
+                payment.hourlyRateMinor,
             ),
-            preferences = preferences,
+            preferences = effectivePreferences,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -265,7 +286,8 @@ class CalendarViewModel(
     fun updatePayment(hourlyRateMinor: Long?, currencyCode: String) {
         viewModelScope.launch {
             runCatching {
-                preferencesRepository.updatePayment(hourlyRateMinor, currencyCode)
+                val profileId = preferencesRepository.preferences.first().activeProfileId
+                workProfileRepository.updatePayment(profileId, hourlyRateMinor, currencyCode)
             }.onFailure {
                 mutableEvents.emit(CalendarEvent.SettingsError)
             }
@@ -321,6 +343,7 @@ class CalendarViewModel(
             workDayRepository: WorkDayRepository,
             preferencesRepository: WorkPreferencesRepository,
             profileBackupRepository: ProfileBackupRepository,
+            workProfileRepository: WorkProfileRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -329,6 +352,7 @@ class CalendarViewModel(
                     workDayRepository = workDayRepository,
                     preferencesRepository = preferencesRepository,
                     profileBackupRepository = profileBackupRepository,
+                    workProfileRepository = workProfileRepository,
                 ) as T
             }
         }

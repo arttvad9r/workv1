@@ -14,6 +14,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +35,7 @@ class WorkProfileMigrationTest {
     }
 
     @Test
-    fun migration3To4PreservesLegacyRowsAndAddsProfileIsolation() = runBlocking {
+    fun migration3To5PreservesLegacyRowsAndAddsProfileIsolation() = runBlocking {
         val path = context.getDatabasePath(databaseName)
         path.parentFile?.mkdirs()
         SQLiteDatabase.openOrCreateDatabase(path, null).use { database ->
@@ -64,13 +65,18 @@ class WorkProfileMigrationTest {
         }
 
         val migrated = Room.databaseBuilder(context, WorkTimeDatabase::class.java, databaseName)
-            .addMigrations(WorkTimeDatabase.MIGRATION_3_4)
+            .addMigrations(
+                WorkTimeDatabase.MIGRATION_3_4,
+                WorkTimeDatabase.MIGRATION_4_5,
+            )
             .build()
         try {
             val profiles = migrated.workProfileDao().observeAll().first()
             assertEquals(1, profiles.size)
             assertEquals(DEFAULT_PROFILE_ID, profiles.single().id)
             assertEquals(DEFAULT_PROFILE_NAME, profiles.single().name)
+            assertNull(profiles.single().hourlyRateMinor)
+            assertNull(profiles.single().currencyCode)
 
             val legacy = migrated.workDayDao().getAll(DEFAULT_PROFILE_ID).single()
             assertEquals("2026-09-08", legacy.date)
@@ -86,6 +92,8 @@ class WorkProfileMigrationTest {
                     id = 2L,
                     name = "Подработка",
                     createdAtEpochMillis = 1L,
+                    hourlyRateMinor = 3_000L,
+                    currencyCode = "USD",
                 ),
             )
             migrated.workDayDao().upsert(
@@ -101,7 +109,10 @@ class WorkProfileMigrationTest {
 
             assertEquals(1, migrated.workDayDao().getAll(DEFAULT_PROFILE_ID).size)
             assertEquals(1, migrated.workDayDao().getAll(2L).size)
-            assertNotNull(migrated.workProfileDao().getById(2L))
+            val second = migrated.workProfileDao().getById(2L)
+            assertNotNull(second)
+            assertEquals(3_000L, second?.hourlyRateMinor)
+            assertEquals("USD", second?.currencyCode)
         } finally {
             migrated.close()
         }

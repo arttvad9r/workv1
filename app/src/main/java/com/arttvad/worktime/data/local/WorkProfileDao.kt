@@ -25,6 +25,11 @@ interface WorkProfileDao {
     @Upsert
     suspend fun upsertAll(profiles: List<WorkProfileEntity>)
 
+    @Query(
+        "UPDATE work_profiles SET hourlyRateMinor = :hourlyRateMinor, currencyCode = :currencyCode WHERE id = :profileId",
+    )
+    suspend fun updatePayment(profileId: Long, hourlyRateMinor: Long?, currencyCode: String): Int
+
     @Query("DELETE FROM work_profiles")
     suspend fun deleteAll()
 }

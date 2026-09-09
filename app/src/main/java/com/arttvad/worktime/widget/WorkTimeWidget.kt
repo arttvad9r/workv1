@@ -29,6 +29,7 @@ import com.arttvad.worktime.MainActivity
 import com.arttvad.worktime.R
 import com.arttvad.worktime.WorkTimeApplication
 import com.arttvad.worktime.data.preferences.WorkPreferences
+import com.arttvad.worktime.domain.model.effectivePayment
 import java.time.YearMonth
 import kotlinx.coroutines.flow.first
 
@@ -44,11 +45,19 @@ class WorkTimeWidget : GlanceAppWidget() {
         val preferences = runCatching {
             application.container.preferencesRepository.preferences.first()
         }.getOrDefault(WorkPreferences())
+        val profile = runCatching {
+            application.container.workProfileRepository.observeProfiles().first()
+                .firstOrNull { item -> item.id == preferences.activeProfileId }
+        }.getOrNull()
+        val payment = profile.effectivePayment(
+            fallbackHourlyRateMinor = preferences.hourlyRateMinor,
+            fallbackCurrencyCode = preferences.currencyCode,
+        )
         val snapshot = WorkTimeWidgetSnapshotFactory.create(
             month = month,
             days = days,
-            hourlyRateMinor = preferences.hourlyRateMinor,
-            currencyCode = preferences.currencyCode,
+            hourlyRateMinor = payment.hourlyRateMinor,
+            currencyCode = payment.currencyCode,
         )
 
         provideContent {

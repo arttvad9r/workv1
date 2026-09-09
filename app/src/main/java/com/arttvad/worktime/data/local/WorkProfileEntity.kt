@@ -11,4 +11,6 @@ data class WorkProfileEntity(
     @PrimaryKey val id: Long,
     val name: String,
     val createdAtEpochMillis: Long,
+    val hourlyRateMinor: Long? = null,
+    val currencyCode: String? = null,
 )

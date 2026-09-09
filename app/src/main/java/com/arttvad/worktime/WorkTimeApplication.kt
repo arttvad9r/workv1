@@ -27,6 +27,7 @@ class AppContainer(context: Context) {
             WorkTimeDatabase.MIGRATION_1_2,
             WorkTimeDatabase.MIGRATION_2_3,
             WorkTimeDatabase.MIGRATION_3_4,
+            WorkTimeDatabase.MIGRATION_4_5,
         )
         .build()
 

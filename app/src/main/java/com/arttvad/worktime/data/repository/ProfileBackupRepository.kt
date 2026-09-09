@@ -6,6 +6,7 @@ import com.arttvad.worktime.data.local.DEFAULT_PROFILE_NAME
 import com.arttvad.worktime.data.local.WorkDayEntity
 import com.arttvad.worktime.data.local.WorkProfileEntity
 import com.arttvad.worktime.data.local.WorkTimeDatabase
+import com.arttvad.worktime.domain.backup.BackupPayment
 import com.arttvad.worktime.domain.backup.BackupProfile
 import com.arttvad.worktime.domain.model.WorkDay
 import com.arttvad.worktime.domain.model.WorkDayType
@@ -44,6 +45,12 @@ class RoomProfileBackupRepository(
                 name = profile.name,
                 createdAtEpochMillis = profile.createdAtEpochMillis,
                 days = daysByProfile[profile.id].orEmpty().map(WorkDayEntity::toDomain),
+                payment = profile.currencyCode?.let { currencyCode ->
+                    BackupPayment(
+                        hourlyRateMinor = profile.hourlyRateMinor,
+                        currencyCode = currencyCode,
+                    )
+                },
             )
         }
     }
@@ -59,6 +66,8 @@ class RoomProfileBackupRepository(
                         id = profile.id,
                         name = profile.name,
                         createdAtEpochMillis = profile.createdAtEpochMillis,
+                        hourlyRateMinor = profile.payment?.hourlyRateMinor,
+                        currencyCode = profile.payment?.currencyCode,
                     )
                 },
             )

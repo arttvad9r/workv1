@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
                         workDayRepository = container.workDayRepository,
                         preferencesRepository = container.preferencesRepository,
                         profileBackupRepository = container.profileBackupRepository,
+                        workProfileRepository = container.workProfileRepository,
                     ),
                 )
                 val profileViewModel: ProfileViewModel = viewModel(

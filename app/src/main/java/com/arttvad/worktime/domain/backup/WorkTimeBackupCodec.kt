@@ -16,7 +16,8 @@ import java.util.Locale
 
 private const val BackupMagic = 0x5754424B
 private const val LegacyBackupVersion = 1
-private const val BackupVersion = 2
+private const val MultiProfileBackupVersion = 2
+private const val BackupVersion = 3
 private const val LegacyDefaultProfileId = 1L
 private const val LegacyDefaultProfileName = "Основная работа"
 private const val MaxBackupProfiles = 1_000
@@ -34,6 +35,7 @@ data class BackupProfile(
     val name: String,
     val createdAtEpochMillis: Long,
     val days: List<WorkDay>,
+    val payment: BackupPayment? = null,
 )
 
 data class WorkTimeBackup(
@@ -65,6 +67,8 @@ object WorkTimeBackupCodec {
             data.writeLong(profile.id)
             writeString(data, profile.name)
             data.writeLong(profile.createdAtEpochMillis)
+            data.writeBoolean(profile.payment != null)
+            profile.payment?.let { payment -> writePayment(data, payment) }
             val sortedDays = profile.days.sortedBy(WorkDay::date)
             data.writeInt(sortedDays.size)
             sortedDays.forEach { day -> writeDay(data, day) }
@@ -78,7 +82,8 @@ object WorkTimeBackupCodec {
         val version = data.readInt()
         val backup = when (version) {
             LegacyBackupVersion -> readLegacyV1(data)
-            BackupVersion -> readV2(data)
+            MultiProfileBackupVersion -> readV2(data)
+            BackupVersion -> readV3(data)
             else -> throw IllegalArgumentException("Unsupported WorkTime backup version: $version")
         }
         require(data.read() == -1) { "Unexpected trailing backup data" }
@@ -108,32 +113,55 @@ object WorkTimeBackupCodec {
     private fun readV2(input: DataInputStream): WorkTimeBackup {
         val payment = readPayment(input)
         val activeProfileId = input.readLong()
+        val profiles = readProfiles(input, includeProfilePayment = false)
+        return WorkTimeBackup(
+            payment = payment,
+            activeProfileId = activeProfileId,
+            profiles = profiles,
+        )
+    }
+
+    private fun readV3(input: DataInputStream): WorkTimeBackup {
+        val payment = readPayment(input)
+        val activeProfileId = input.readLong()
+        val profiles = readProfiles(input, includeProfilePayment = true)
+        return WorkTimeBackup(
+            payment = payment,
+            activeProfileId = activeProfileId,
+            profiles = profiles,
+        )
+    }
+
+    private fun readProfiles(
+        input: DataInputStream,
+        includeProfilePayment: Boolean,
+    ): List<BackupProfile> {
         val profileCount = input.readInt()
         require(profileCount in 1..MaxBackupProfiles) { "Invalid work-profile count" }
         var totalDays = 0
-        val profiles = ArrayList<BackupProfile>(profileCount)
-        repeat(profileCount) {
+        return List(profileCount) {
             val id = input.readLong()
             val name = readString(input)
             val createdAtEpochMillis = input.readLong()
+            val profilePayment = if (includeProfilePayment && input.readBoolean()) {
+                readPayment(input)
+            } else {
+                null
+            }
             val dayCount = input.readInt()
             require(dayCount in 0..MaxBackupDays) { "Invalid work-day count" }
             totalDays += dayCount
             require(totalDays <= MaxBackupDays) { "Too many work-day records" }
             val days = ArrayList<WorkDay>(dayCount)
             repeat(dayCount) { days += readDay(input) }
-            profiles += BackupProfile(
+            BackupProfile(
                 id = id,
                 name = name,
                 createdAtEpochMillis = createdAtEpochMillis,
                 days = days,
+                payment = profilePayment,
             )
         }
-        return WorkTimeBackup(
-            payment = payment,
-            activeProfileId = activeProfileId,
-            profiles = profiles,
-        )
     }
 
     private fun writePayment(output: DataOutputStream, payment: BackupPayment) {
@@ -178,12 +206,7 @@ object WorkTimeBackupCodec {
     private fun validate(backup: WorkTimeBackup) {
         require(backup.profiles.size in 1..MaxBackupProfiles) { "Invalid work-profile count" }
         require(backup.activeProfileId > 0L) { "Invalid active profile id" }
-        val currencyCode = backup.payment.currencyCode.uppercase(Locale.ROOT)
-        require(currencyCode.length == 3) { "Invalid currency code" }
-        Currency.getInstance(currencyCode)
-        require(backup.payment.hourlyRateMinor == null || backup.payment.hourlyRateMinor >= 0) {
-            "Invalid base hourly rate"
-        }
+        validatePayment(backup.payment)
         val profileIds = HashSet<Long>(backup.profiles.size)
         var totalDays = 0
         backup.profiles.forEach { profile ->
@@ -194,11 +217,21 @@ object WorkTimeBackupCodec {
             }
             require(profile.name.length <= MaxProfileNameLength) { "Work-profile name is too long" }
             require(profile.createdAtEpochMillis >= 0L) { "Invalid work-profile timestamp" }
+            profile.payment?.let(::validatePayment)
             totalDays += profile.days.size
             require(totalDays <= MaxBackupDays) { "Too many work-day records" }
             validateDays(profile.days, profile.id)
         }
         require(backup.activeProfileId in profileIds) { "Active profile is missing from backup" }
+    }
+
+    private fun validatePayment(payment: BackupPayment) {
+        val currencyCode = payment.currencyCode.uppercase(Locale.ROOT)
+        require(currencyCode.length == 3) { "Invalid currency code" }
+        Currency.getInstance(currencyCode)
+        require(payment.hourlyRateMinor == null || payment.hourlyRateMinor >= 0) {
+            "Invalid base hourly rate"
+        }
     }
 
     private fun validateDays(days: List<WorkDay>, profileId: Long) {
