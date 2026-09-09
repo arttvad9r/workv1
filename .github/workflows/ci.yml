@@ -54,6 +54,10 @@ jobs:
   instrumentation:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [36, 37]
 
     steps:
       - name: Checkout
@@ -86,7 +90,7 @@ jobs:
       - name: Run Android instrumentation tests
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: 36
+          api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
           profile: pixel_7
