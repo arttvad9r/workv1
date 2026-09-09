@@ -1,6 +1,6 @@
 # WorkTime — implementation roadmap
 
-**Дата:** 2026-09-09
+**Дата:** 2026-09-10
 
 ## Definition of Done
 
@@ -123,6 +123,7 @@ Only after core metrics/usability are stable:
 - [x] quick-add action — dynamic launcher shortcut «Сегодня» reuses the existing single Activity and opens the real editor for the current date;
 - [x] optional reminder — opt-in local daily notification with persisted time, runtime notification permission, inexact alarm scheduling, reboot/time-zone rescheduling and no exact-alarm special access;
 - [x] calendar/date shortcuts — tapping the month title opens the stable Material 3 DatePicker for 1900–2199 and jumps directly into the existing editor for the confirmed date;
+- [x] calendar search/filter — secondary full-height Material 3 sheet searches existing entries in the visible month and active profile by trimmed case-insensitive note text, filters by day type, sorts by date and opens the existing day editor without changing Room schema or primary calendar flow;
 - [x] optional timer/check-in/out — persisted local shift session without a foreground service; survives Activity relaunch, limits duration to the existing 24:00 editor model and only pre-fills worked duration for explicit user confirmation/save.
 
 ## Phase 6 — Multiple work profiles
@@ -149,7 +150,7 @@ Not started unless product need is proven.
 
 ## Verified build status
 
-Phase 6 перенесён в `main`. Текущий release/runtime marker больше не привязан к вручную записанному commit SHA: ревизия считается runtime-проверенной только после полного зелёного обязательного Android CI на её фактическом head commit.
+Phase 6 и P1 calendar search/filter реализованы до optional sync. Текущий release/runtime marker не привязан к вручную записанному commit SHA: ревизия считается runtime-проверенной только после полного зелёного обязательного Android CI на её фактическом head commit.
 
 GitHub Actions выполняет через repository Gradle Wrapper:
 
@@ -157,13 +158,15 @@ GitHub Actions выполняет через repository Gradle Wrapper:
 - `lintDebug`;
 - `assembleDebug`;
 - `assembleDebugAndroidTest`;
-- `bundleRelease` как production-like AAB smoke с R8/resource shrinking;
+- отдельный последовательный `bundleRelease` как production-like AAB smoke с R8/resource shrinking;
 - `connectedDebugAndroidTest` на Android API 36 x86_64 emulator;
 - отдельную Android 17 compatibility suite на API 37.1 `google_apis_playstore_ps16k` x86_64 с 16 KB page-size image.
 
-API 36 instrumentation gate использует обычный `connectedDebugAndroidTest`: Package Manager должен быть готов, `AndroidTestRunner failed` считается ошибкой, а XML-результат должен содержать реально выполненные тесты. Android 17 API 37.1 проверяется отдельным direct-only path, потому что текущий AGP/UTP device-execution на доступном 16 KB Play Store image может завершаться `BUILD SUCCESSFUL` с zero-test XML и не даёт полезного runtime-доказательства. Android 17 job сначала собирает `assembleDebug` и `assembleDebugAndroidTest`, переводит Play Store image в offline/quiesced состояние, один раз устанавливает app/test APK, ждёт idle broadcast queues и запускает зарегистрированный `AndroidJUnitRunner` через `adb shell am instrument`. Play Store, Photos и Wellbeing отключаются только внутри этого CI emulator; GMS не отключается и лишь force-stop'ится для остановки first-boot background work. Gate проходит только при непустом успешном результате `OK (N tests)`, где `N > 0`. CI сохраняет instrumentation log, emulator diagnostics и при crash отдельный `android-instrumentation-logcat.log` для разбора ранних process/LMKD failures. Проверочный Android 17 direct-only run завершил 42 теста успешно.
+Debug/unit/lint/androidTest assembly и release bundle выполняются двумя последовательными Gradle invocations. Это сохраняет полный release gate и исключает конкурентную запись одного Room schema export из `kspDebugKotlin` и `kspReleaseKotlin`, которая воспроизводимо давала обрезанный JSON при одновременном запуске variants.
 
-Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, profile isolation/switching/per-profile payment, month/year statistics и combined profile reports, export surfaces, PDF generation/validity, multi-profile backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, persisted shift timer start/relaunch/stop flow, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog, timer controls и combined reports. Та же runtime suite используется для Android 17 compatibility. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания; timer JVM tests проверяют расчёт целых минут и границы существующей модели длительности.
+API 36 instrumentation gate использует обычный `connectedDebugAndroidTest`: Package Manager должен быть готов, `AndroidTestRunner failed` считается ошибкой, а XML-результат должен содержать реально выполненные тесты. Android 17 API 37.1 проверяется отдельным direct-only path, потому что текущий AGP/UTP device-execution на доступном 16 KB Play Store image может завершаться `BUILD SUCCESSFUL` с zero-test XML и не даёт полезного runtime-доказательства. Android 17 job сначала собирает `assembleDebug` и `assembleDebugAndroidTest`, переводит Play Store image в offline/quiesced состояние, один раз устанавливает app/test APK, ждёт idle broadcast queues и запускает зарегистрированный `AndroidJUnitRunner` через `adb shell am instrument`. Play Store, Photos и Wellbeing отключаются только внутри этого CI emulator; GMS не отключается и лишь force-stop'ится для остановки first-boot background work. Gate проходит только при непустом успешном результате `OK (N tests)`, где `N > 0`. CI сохраняет instrumentation log, emulator diagnostics и при crash отдельный `android-instrumentation-logcat.log` для разбора ранних process/LMKD failures. Актуальный Android 17 direct-only run с calendar search/filter завершил 44 теста успешно.
+
+Instrumentation-проверки используют реальные `MainActivity`, `AppContainer`, Room и DataStore. Покрыты сохранение/редактирование/удаление с Undo, relaunch, configuration recreation, day-rate override, day types, shift calculator, pattern preview/apply/undo, Room migrations, profile isolation/switching/per-profile payment, month/year statistics и combined profile reports, export surfaces, PDF generation/validity, multi-profile backup/restore against real Room + DataStore, destructive restore confirmation, widget receiver/provider metadata, dynamic quick-add shortcut, reminder permission/settings persistence и фактическое создание/отмена AlarmManager PendingIntent, manifest security для reminder, открытие stable Material 3 DatePicker из заголовка месяца и переход из него в реальный day editor, persisted shift timer start/relaunch/stop flow, calendar note search/day-type filtering с открытием существующей записи, accessibility основных поверхностей и доступность primary actions при font scale 200%, включая DatePicker dialog, timer controls, combined reports и calendar search sheet. Та же runtime suite используется для Android 17 compatibility. Glance JVM tests отдельно проверяют compact/expanded widget content и расчёт widget snapshot из существующей month-summary/money логики; reminder JVM tests проверяют расчёт следующего локального срабатывания; timer JVM tests проверяют расчёт целых минут и границы существующей модели длительности.
 
 AndroidX Espresso явно закреплён на 3.7.0 для Android 17-compatible input injection. Gradle Wrapper 9.6.1 используется и локально, и в CI; SHA-256 binary distribution и wrapper JAR сверены с официальным Gradle checksum reference. GitHub Actions dependencies закреплены immutable commit SHA. `android-actions/setup-android` использует Node-24-compatible v4.0.1, compileSdk 37 устанавливается в CI явно как `platforms;android-37.0`, а Android 17 AVD создаётся из официального API 37.1 16 KB Play Store system image с явной ADB-auth/readiness проверкой до запуска tests. Успешный build проверяет release bundle path и публикует debug APK как CI artifact с ограниченным retention.
 
