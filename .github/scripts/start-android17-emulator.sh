@@ -23,20 +23,22 @@ nohup emulator \
   >"$emulator_log" 2>&1 &
 echo $! > android17-emulator.pid
 
-adb wait-for-device
-
 ready=0
 for attempt in $(seq 1 120); do
-  boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
-  if [[ "$boot_completed" == "1" ]] && adb shell cmd package path android >/dev/null 2>&1; then
-    ready=1
-    break
+  adb_state="$(adb get-state 2>/dev/null || true)"
+  if [[ "$adb_state" == "device" ]]; then
+    boot_completed="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+    if [[ "$boot_completed" == "1" ]] && adb shell cmd package path android >/dev/null 2>&1; then
+      ready=1
+      break
+    fi
   fi
   sleep 2
 done
 
 if [[ "$ready" -ne 1 ]]; then
-  echo "::error::Android 17 emulator did not reach boot + Package Manager readiness"
+  echo "::error::Android 17 emulator did not reach ADB + boot + Package Manager readiness"
+  adb devices -l || true
   cat "$emulator_log" || true
   exit 1
 fi
