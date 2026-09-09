@@ -18,6 +18,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.arttvad.worktime.R
@@ -54,6 +57,8 @@ import com.arttvad.worktime.domain.exporting.MonthXlsxExporter
 import com.arttvad.worktime.domain.model.WorkDayType
 import com.arttvad.worktime.domain.pattern.ShiftPatternDay
 import com.arttvad.worktime.exporting.MonthPdfExporter
+import com.arttvad.worktime.ui.profile.LocalProfileSwitcherEnvironment
+import com.arttvad.worktime.ui.profile.ProfileSwitcherSheet
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -83,6 +88,7 @@ fun WorkTimeScreen(
     onRestoreBackup: suspend (InputStream) -> Result<Int>,
 ) {
     var paymentSettingsOpen by rememberSaveable { mutableStateOf(false) }
+    var profileSwitcherOpen by rememberSaveable { mutableStateOf(false) }
     var patternGeneratorOpen by rememberSaveable { mutableStateOf(false) }
     var statisticsOpen by rememberSaveable { mutableStateOf(false) }
     var restoreConfirmationOpen by rememberSaveable { mutableStateOf(false) }
@@ -96,6 +102,16 @@ fun WorkTimeScreen(
     )
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val profileEnvironment = LocalProfileSwitcherEnvironment.current
+    val activeProfileName = profileEnvironment.profiles
+        .firstOrNull { profile -> profile.id == profileEnvironment.activeProfileId }
+        ?.name
+        ?: profileEnvironment.profiles.firstOrNull()?.name
+        ?: stringResource(R.string.app_name)
+    val profileSwitchDescription = stringResource(
+        R.string.profile_switch_content_description,
+        activeProfileName,
+    )
     val csvExportSuccess = stringResource(R.string.export_success)
     val csvExportError = stringResource(R.string.export_error)
     val xlsxExportSuccess = stringResource(R.string.export_xlsx_success)
@@ -219,7 +235,23 @@ fun WorkTimeScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
+                title = {
+                    TextButton(
+                        onClick = { profileSwitcherOpen = true },
+                        modifier = Modifier
+                            .testTag("profile-switcher-open")
+                            .semantics { contentDescription = profileSwitchDescription },
+                    ) {
+                        Text(
+                            text = activeProfileName,
+                            maxLines = 1,
+                        )
+                        Icon(
+                            imageVector = Icons.Rounded.ArrowDropDown,
+                            contentDescription = null,
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = { patternGeneratorOpen = true }) {
                         Icon(
@@ -272,6 +304,17 @@ fun WorkTimeScreen(
                 }
             }
         }
+    }
+
+    if (profileSwitcherOpen) {
+        ProfileSwitcherSheet(
+            profiles = profileEnvironment.profiles,
+            activeProfileId = profileEnvironment.activeProfileId,
+            switchingEnabled = profileEnvironment.switchingEnabled,
+            onDismiss = { profileSwitcherOpen = false },
+            onSelectProfile = profileEnvironment.onSelectProfile,
+            onCreateProfile = profileEnvironment.onCreateProfile,
+        )
     }
 
     if (paymentSettingsOpen) {

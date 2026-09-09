@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.arttvad.worktime.ui.calendar.CalendarViewModel
 import com.arttvad.worktime.ui.calendar.WorkTimeRoot
+import com.arttvad.worktime.ui.profile.ProfileViewModel
 import com.arttvad.worktime.ui.theme.WorkTimeTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,15 +32,22 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             WorkTimeTheme {
-                val viewModel: CalendarViewModel = viewModel(
+                val calendarViewModel: CalendarViewModel = viewModel(
                     factory = CalendarViewModel.factory(
                         workDayRepository = container.workDayRepository,
                         preferencesRepository = container.preferencesRepository,
                         profileBackupRepository = container.profileBackupRepository,
                     ),
                 )
+                val profileViewModel: ProfileViewModel = viewModel(
+                    factory = ProfileViewModel.factory(
+                        profileRepository = container.workProfileRepository,
+                        preferencesRepository = container.preferencesRepository,
+                    ),
+                )
                 WorkTimeRoot(
-                    viewModel = viewModel,
+                    viewModel = calendarViewModel,
+                    profileViewModel = profileViewModel,
                     openTodayRequestToken = openTodayRequestToken,
                 )
             }

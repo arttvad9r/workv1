@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile_switch_content_description">Сменить профиль работы. Сейчас: %1$s</string>
+    <string name="profile_sheet_title">Профили работы</string>
+    <string name="profile_sheet_description">Записи и статистика разделены по профилям.</string>
+    <string name="profile_timer_block">Остановите или сбросьте активный таймер, чтобы сменить профиль.</string>
+    <string name="profile_add">Добавить профиль</string>
+    <string name="profile_name">Название профиля</string>
+    <string name="profile_create">Создать</string>
+    <string name="profile_action_error">Не удалось изменить профиль</string>
+</resources>

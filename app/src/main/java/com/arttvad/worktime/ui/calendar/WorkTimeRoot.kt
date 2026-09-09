@@ -13,6 +13,9 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arttvad.worktime.R
 import com.arttvad.worktime.reminder.WorkReminderScheduler
+import com.arttvad.worktime.ui.profile.LocalProfileSwitcherEnvironment
+import com.arttvad.worktime.ui.profile.ProfileSwitcherEnvironment
+import com.arttvad.worktime.ui.profile.ProfileViewModel
 import com.arttvad.worktime.widget.WorkTimeWidget
 import java.time.LocalDate
 import java.time.YearMonth
@@ -20,9 +23,11 @@ import java.time.YearMonth
 @Composable
 fun WorkTimeRoot(
     viewModel: CalendarViewModel,
+    profileViewModel: ProfileViewModel,
     openTodayRequestToken: Long = 0L,
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
+    val profileUiState = profileViewModel.uiState.collectAsStateWithLifecycle().value
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -108,6 +113,21 @@ fun WorkTimeRoot(
             onStartShift = viewModel::startShift,
             onStopShift = viewModel::stopShift,
             onResetShift = viewModel::resetShift,
+        ),
+        LocalProfileSwitcherEnvironment provides ProfileSwitcherEnvironment(
+            profiles = profileUiState.profiles,
+            activeProfileId = profileUiState.activeProfileId,
+            switchingEnabled = !profileUiState.activeShiftRunning,
+            onSelectProfile = { profileId ->
+                profileViewModel.selectProfile(profileId).onSuccess {
+                    viewModel.dismissDayEditor()
+                }
+            },
+            onCreateProfile = { name ->
+                profileViewModel.createProfile(name).onSuccess {
+                    viewModel.dismissDayEditor()
+                }
+            },
         ),
     ) {
         WorkTimeScreen(
