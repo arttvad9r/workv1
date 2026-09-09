@@ -13,7 +13,9 @@ import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.arttvad.worktime.R
 import com.arttvad.worktime.reminder.WorkReminderScheduler
+import com.arttvad.worktime.ui.profile.LocalProfileReportEnvironment
 import com.arttvad.worktime.ui.profile.LocalProfileSwitcherEnvironment
+import com.arttvad.worktime.ui.profile.ProfileReportEnvironment
 import com.arttvad.worktime.ui.profile.ProfileSwitcherEnvironment
 import com.arttvad.worktime.ui.profile.ProfileViewModel
 import com.arttvad.worktime.widget.WorkTimeWidget
@@ -128,6 +130,12 @@ fun WorkTimeRoot(
                     viewModel.dismissDayEditor()
                 }
             },
+        ),
+        LocalProfileReportEnvironment provides ProfileReportEnvironment(
+            activeProfileId = uiState.activeProfileId,
+            profiles = uiState.profileStatistics,
+            combinedMonthStatistics = uiState.combinedMonthStatistics,
+            combinedYearStatistics = uiState.combinedYearStatistics,
         ),
     ) {
         WorkTimeScreen(

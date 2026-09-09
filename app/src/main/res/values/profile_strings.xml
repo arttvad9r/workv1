@@ -8,4 +8,12 @@
     <string name="profile_name">Название профиля</string>
     <string name="profile_create">Создать</string>
     <string name="profile_action_error">Не удалось изменить профиль</string>
+    <string name="statistics_profile_current">Текущий профиль</string>
+    <string name="statistics_profile_all">Все профили</string>
+    <string name="statistics_period_profile">%1$s · %2$s</string>
+    <string name="statistics_combined_earnings">Заработок по валютам</string>
+    <string name="statistics_profiles_breakdown">По профилям</string>
+    <string name="statistics_combined_currency_note">Доходы в разных валютах не суммируются между собой.</string>
+    <string name="statistics_combined_incomplete_note">Если для профиля с рабочими часами не задана ставка, сумма этой валюты показывается как «—».</string>
+    <string name="statistics_export_profile_only">Экспорт формируется для выбранного профиля. Для экспорта переключитесь на нужный профиль.</string>
 </resources>

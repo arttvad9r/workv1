@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.map
 interface WorkDayRepository {
     fun observeMonth(month: YearMonth): Flow<List<WorkDay>>
     fun observeYear(year: Year): Flow<List<WorkDay>>
+    fun observeMonthAllProfiles(month: YearMonth): Flow<Map<Long, List<WorkDay>>>
+    fun observeYearAllProfiles(year: Year): Flow<Map<Long, List<WorkDay>>>
     suspend fun snapshotAll(): List<WorkDay>
     suspend fun upsert(day: WorkDay)
     suspend fun delete(date: LocalDate)
@@ -42,10 +44,26 @@ class RoomWorkDayRepository(
     override fun observeYear(year: Year): Flow<List<WorkDay>> =
         observeRange(year.atDay(1), year.atMonth(12).atEndOfMonth())
 
+    override fun observeMonthAllProfiles(month: YearMonth): Flow<Map<Long, List<WorkDay>>> =
+        observeRangeAllProfiles(month.atDay(1), month.atEndOfMonth())
+
+    override fun observeYearAllProfiles(year: Year): Flow<Map<Long, List<WorkDay>>> =
+        observeRangeAllProfiles(year.atDay(1), year.atMonth(12).atEndOfMonth())
+
     private fun observeRange(first: LocalDate, last: LocalDate): Flow<List<WorkDay>> =
         activeProfileId.flatMapLatest { profileId ->
             dao.observeRange(profileId, first.toString(), last.toString())
                 .map { entities -> entities.map(WorkDayEntity::toDomain) }
+        }
+
+    private fun observeRangeAllProfiles(
+        first: LocalDate,
+        last: LocalDate,
+    ): Flow<Map<Long, List<WorkDay>>> = dao
+        .observeRangeAllProfiles(first.toString(), last.toString())
+        .map { entities ->
+            entities.groupBy(WorkDayEntity::profileId)
+                .mapValues { (_, rows) -> rows.map(WorkDayEntity::toDomain) }
         }
 
     override suspend fun snapshotAll(): List<WorkDay> {
