@@ -76,6 +76,7 @@ internal fun CalendarSearchSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("calendar-search-sheet"),
+        dragHandle = null,
     ) {
         CalendarSearchContent(
             month = month,
