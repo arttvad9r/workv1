@@ -22,6 +22,18 @@ abstract class WorkDayDao {
         toDate: String,
     ): Flow<List<WorkDayEntity>>
 
+    @Query(
+        """
+        SELECT * FROM work_days
+        WHERE date BETWEEN :fromDate AND :toDate
+        ORDER BY profileId ASC, date ASC
+        """,
+    )
+    abstract fun observeRangeAllProfiles(
+        fromDate: String,
+        toDate: String,
+    ): Flow<List<WorkDayEntity>>
+
     @Query("SELECT * FROM work_days WHERE profileId = :profileId ORDER BY date ASC")
     abstract suspend fun getAll(profileId: Long): List<WorkDayEntity>
 

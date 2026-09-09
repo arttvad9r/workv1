@@ -115,12 +115,7 @@ class WorkTimeFlowTest {
                 onNodeWithTag("settings-hourly-rate").assertTextContains("12.5")
             }
         } finally {
-            runBlocking {
-                application.container.preferencesRepository.updatePayment(
-                    hourlyRateMinor = originalPayment.first,
-                    currencyCode = originalPayment.second,
-                )
-            }
+            updateActiveProfilePayment(originalPayment.first, originalPayment.second)
         }
     }
 
@@ -129,12 +124,7 @@ class WorkTimeFlowTest {
         val originalPayment = currentPayment()
 
         try {
-            runBlocking {
-                application.container.preferencesRepository.updatePayment(
-                    hourlyRateMinor = originalPayment.first,
-                    currencyCode = "EUR",
-                )
-            }
+            updateActiveProfilePayment(originalPayment.first, "EUR")
 
             ActivityScenario.launch(MainActivity::class.java).use {
                 onNodeWithTag(dayTag).performClick()
@@ -165,12 +155,7 @@ class WorkTimeFlowTest {
                 onNodeWithTag("day-editor-rate-override").assertTextContains("20")
             }
         } finally {
-            runBlocking {
-                application.container.preferencesRepository.updatePayment(
-                    hourlyRateMinor = originalPayment.first,
-                    currencyCode = originalPayment.second,
-                )
-            }
+            updateActiveProfilePayment(originalPayment.first, originalPayment.second)
         }
     }
 
@@ -373,6 +358,21 @@ class WorkTimeFlowTest {
 
     private fun currentPayment(): Pair<Long?, String> = runBlocking {
         val preferences = application.container.preferencesRepository.preferences.first()
-        preferences.hourlyRateMinor to preferences.currencyCode
+        val profile = application.container.workProfileRepository.observeProfiles()
+            .first()
+            .first { it.id == preferences.activeProfileId }
+        (profile.hourlyRateMinor ?: preferences.hourlyRateMinor) to
+            (profile.currencyCode ?: preferences.currencyCode)
+    }
+
+    private fun updateActiveProfilePayment(hourlyRateMinor: Long?, currencyCode: String) {
+        runBlocking {
+            val profileId = application.container.preferencesRepository.preferences.first().activeProfileId
+            application.container.workProfileRepository.updatePayment(
+                profileId = profileId,
+                hourlyRateMinor = hourlyRateMinor,
+                currencyCode = currencyCode,
+            )
+        }
     }
 }

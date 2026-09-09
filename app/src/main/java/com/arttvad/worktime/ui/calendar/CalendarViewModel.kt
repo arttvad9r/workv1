@@ -11,11 +11,15 @@ import com.arttvad.worktime.data.repository.WorkProfileRepository
 import com.arttvad.worktime.domain.backup.BackupPayment
 import com.arttvad.worktime.domain.backup.BackupRestoreCoordinator
 import com.arttvad.worktime.domain.backup.BackupSettings
+import com.arttvad.worktime.domain.calculation.CombinedMonthStatistics
+import com.arttvad.worktime.domain.calculation.CombinedYearStatistics
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatistics
 import com.arttvad.worktime.domain.calculation.DetailedMonthStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.DetailedYearStatistics
 import com.arttvad.worktime.domain.calculation.DetailedYearStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.MonthSummaryCalculator
+import com.arttvad.worktime.domain.calculation.ProfilePeriodStatistics
+import com.arttvad.worktime.domain.calculation.ProfileReportStatisticsCalculator
 import com.arttvad.worktime.domain.calculation.ShiftTimerCalculator
 import com.arttvad.worktime.domain.calculation.WorkDayValidator
 import com.arttvad.worktime.domain.model.MonthSummary
@@ -50,6 +54,10 @@ data class CalendarUiState(
     val detailedStatistics: DetailedMonthStatistics = DetailedMonthStatistics(),
     val detailedYearStatistics: DetailedYearStatistics = DetailedYearStatistics(Year.now()),
     val preferences: WorkPreferences = WorkPreferences(),
+    val activeProfileId: Long = 1L,
+    val profileStatistics: List<ProfilePeriodStatistics> = emptyList(),
+    val combinedMonthStatistics: CombinedMonthStatistics = CombinedMonthStatistics(),
+    val combinedYearStatistics: CombinedYearStatistics = CombinedYearStatistics(Year.now()),
 )
 
 sealed interface CalendarEvent {
@@ -69,6 +77,13 @@ private data class CalendarPeriodData(
     val month: YearMonth,
     val monthDays: List<WorkDay>,
     val yearDays: List<WorkDay>,
+    val allMonthDays: Map<Long, List<WorkDay>> = emptyMap(),
+    val allYearDays: Map<Long, List<WorkDay>> = emptyMap(),
+)
+
+private data class AllProfilePeriodData(
+    val monthDays: Map<Long, List<WorkDay>>,
+    val yearDays: Map<Long, List<WorkDay>>,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -126,18 +141,54 @@ class CalendarViewModel(
                 }
         }
 
+    private val allMonthEntries = visibleMonth.flatMapLatest { month ->
+        workDayRepository.observeMonthAllProfiles(month)
+            .catch {
+                mutableEvents.emit(CalendarEvent.DataError)
+                emit(emptyMap())
+            }
+    }
+
+    private val allYearEntries = visibleMonth
+        .map { month -> Year.of(month.year) }
+        .distinctUntilChanged()
+        .flatMapLatest { year ->
+            workDayRepository.observeYearAllProfiles(year)
+                .catch {
+                    mutableEvents.emit(CalendarEvent.DataError)
+                    emit(emptyMap())
+                }
+        }
+
     private val profiles = workProfileRepository.observeProfiles()
         .catch {
             mutableEvents.emit(CalendarEvent.DataError)
             emit(emptyList())
         }
 
-    private val periodData = combine(
+    private val activePeriodData = combine(
         visibleMonth,
         monthEntries,
         yearEntries,
     ) { month, monthDays, yearDays ->
         CalendarPeriodData(month, monthDays, yearDays)
+    }
+
+    private val allProfilePeriodData = combine(
+        allMonthEntries,
+        allYearEntries,
+    ) { monthDays, yearDays ->
+        AllProfilePeriodData(monthDays, yearDays)
+    }
+
+    private val periodData = combine(
+        activePeriodData,
+        allProfilePeriodData,
+    ) { active, allProfiles ->
+        active.copy(
+            allMonthDays = allProfiles.monthDays,
+            allYearDays = allProfiles.yearDays,
+        )
     }
 
     val uiState = combine(
@@ -157,6 +208,27 @@ class CalendarViewModel(
             hourlyRateMinor = payment.hourlyRateMinor,
             currencyCode = payment.currencyCode,
         )
+        val reportYear = Year.of(data.month.year)
+        val profileStatistics = workProfiles.map { profile ->
+            val profilePayment = profile.effectivePayment(
+                fallbackHourlyRateMinor = preferences.hourlyRateMinor,
+                fallbackCurrencyCode = preferences.currencyCode,
+            )
+            ProfilePeriodStatistics(
+                profileId = profile.id,
+                profileName = profile.name,
+                currencyCode = profilePayment.currencyCode,
+                month = DetailedMonthStatisticsCalculator.calculate(
+                    data.allMonthDays[profile.id].orEmpty(),
+                    profilePayment.hourlyRateMinor,
+                ),
+                year = DetailedYearStatisticsCalculator.calculate(
+                    reportYear,
+                    data.allYearDays[profile.id].orEmpty(),
+                    profilePayment.hourlyRateMinor,
+                ),
+            )
+        }
         CalendarUiState(
             visibleMonth = data.month,
             entries = data.monthDays.associateBy(WorkDay::date),
@@ -167,11 +239,18 @@ class CalendarViewModel(
                 payment.hourlyRateMinor,
             ),
             detailedYearStatistics = DetailedYearStatisticsCalculator.calculate(
-                Year.of(data.month.year),
+                reportYear,
                 data.yearDays,
                 payment.hourlyRateMinor,
             ),
             preferences = effectivePreferences,
+            activeProfileId = preferences.activeProfileId,
+            profileStatistics = profileStatistics,
+            combinedMonthStatistics = ProfileReportStatisticsCalculator.combineMonth(profileStatistics),
+            combinedYearStatistics = ProfileReportStatisticsCalculator.combineYear(
+                reportYear,
+                profileStatistics,
+            ),
         )
     }.stateIn(
         scope = viewModelScope,
