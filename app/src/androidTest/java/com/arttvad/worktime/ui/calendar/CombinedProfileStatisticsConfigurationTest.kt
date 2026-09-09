@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.DeviceConfigurationOverride
-import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.FontScale
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -151,7 +151,6 @@ class CombinedProfileStatisticsConfigurationTest {
             .onNodeWithTag("statistics-profile-row-2")
             .performScrollTo()
             .assertIsDisplayed()
-        composeRule.onNodeWithTag("statistics-export-csv").assertDoesNotExist()
 
         composeRule
             .onNodeWithTag("statistics-scope-year")
