@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -75,7 +76,9 @@ internal fun CalendarSearchSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = Modifier.testTag("calendar-search-sheet"),
+        modifier = Modifier
+            .fillMaxHeight()
+            .testTag("calendar-search-sheet"),
         dragHandle = null,
     ) {
         CalendarSearchContent(
