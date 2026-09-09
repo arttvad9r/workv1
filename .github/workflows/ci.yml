@@ -140,7 +140,9 @@ jobs:
       - name: Start Android 17 API 37.1 16 KB emulator
         run: bash .github/scripts/start-android17-emulator.sh
 
-      - name: Run Android 17 instrumentation tests
+      - name: Run Android 17 instrumentation tests directly
+        env:
+          DIRECT_ANDROID_INSTRUMENTATION: '1'
         run: bash .github/scripts/run-instrumentation.sh
 
       - name: Upload Android 17 instrumentation diagnostics
