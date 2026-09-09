@@ -40,6 +40,7 @@ fi
 
 nohup "$emulator_bin" \
   -avd "$avd_name" \
+  -memory 3072 \
   -no-window \
   -gpu swiftshader_indirect \
   -no-snapshot \
