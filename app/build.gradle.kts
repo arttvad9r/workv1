@@ -87,6 +87,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.accessibility)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.espresso.core)
+    androidTestImplementation(libs.androidx.test.espresso.intents)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
