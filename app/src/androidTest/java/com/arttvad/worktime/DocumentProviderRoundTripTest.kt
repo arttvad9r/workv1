@@ -1,6 +1,7 @@
 package com.arttvad.worktime
 
 import android.app.Activity
+import android.app.Instrumentation.ActivityResult
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -10,7 +11,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runEmptyComposeUiTest
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.intent.ActivityResult
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intended
 import androidx.test.espresso.intent.Intents.intending
